@@ -1,0 +1,12 @@
+{
+    "source": "github",
+    "owner": "IonicaBizau",
+    "name": "form-serializer",
+    "dependencies": [
+        "/main.js",
+        "github/jillix/bind/v0.1.0",
+        "github/jillix/events/v0.1.2",
+        "http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"
+    ],
+    "operations": [ ]
+}
