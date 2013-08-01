@@ -5,6 +5,16 @@ Mono module that serialize an form object and emits it.
 
 # Documentation
 
+## Module configuration
+
+The event module name is configurable (the default value is `serializedForm`).
+
+```JSON
+{
+    "eventName": "myCustomEventName"
+}
+```
+
 ## How to use
 
 Place in the module HTML `data-field` and `data-value` atributes.
@@ -44,6 +54,20 @@ Place in the module HTML `data-field` and `data-value` atributes.
     </tbody>
 </table>
 
-## Example
+# Example
 
-**TODO**
+```HTML
+<form>
+    <input type="text" data-field="author" value="Ionică Bizău" />
+    <input type="checkbox" data-field="visible" data-value="prop" data-params="checked" value="Ionică Bizău" />
+</form>
+```
+
+When the form above will be submitted the following JSON object will be generated and emited:
+
+```JSON
+{
+    "author": "IonicaBizau",
+    "visible": false
+}
+```
