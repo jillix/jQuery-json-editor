@@ -12,8 +12,30 @@ The event module name is configurable (the default value is `serializedForm`).
 ```JSON
 {
     "eventName": "myCustomEventName"
+    "onFill": {
+        "binds": [BIND_OBJECTS]
+    }
 }
 ```
+
+## Public functions
+
+<table>
+    <thead>
+        <tr>
+            <th>Function Name</th>
+            <th>Parameters</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>fillForm</code></td>
+            <td><code>data</code>: an object, as first function parameter. Use <code>config.onFille.binds</code> to fill the form.</td>
+            <td>Fill the form using Bind Mono Module. The binds are configurable from <code>config.onFill.binds</code>. See for more information <a href="http://github.com/jillix/bind">Bind</a> module.</td>
+        </tr>
+    </tbody>
+</table>
 
 ## How to use
 
