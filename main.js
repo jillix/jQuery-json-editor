@@ -31,4 +31,16 @@ module.exports = function(config) {
 
         self.emit(config.eventName || "serializedForm", serializedForm);
     });
+
+    self.fillForm = function (data) {
+
+        if (data.length > 1) { return alert("You can't edit multiple lists at same time."); }
+        config.onFill = config.onFill || {};
+
+        for (var i in config.onFill.binds) {
+            var bindObj = config.onFill.binds[i];
+            bindObj.context = self.dom;
+            Bind.call(self, bindObj, data);
+        }
+    };
 };
