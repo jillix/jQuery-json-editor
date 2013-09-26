@@ -1,3 +1,4 @@
+M.wrap('github/IonicaBizau/form-serializer/dev/main.js', function (require, module, exports) {
 var Bind = require("github/jillix/bind");
 var Events = require("github/jillix/events");
 
@@ -82,11 +83,13 @@ module.exports = function(config) {
         }
 
         $("form", self.dom).show();
-        $(".alert-error", self.dom).remove();
+        $(".alert-error, .alert-danger", self.dom).remove();
     };
 
     self.clearErrors = function () {
         $("form", self.dom).show();
-        $(".alert-error", self.dom).remove();
+        $(".alert-error, .alert-danger", self.dom).remove();
     };
 };
+
+return module; });
