@@ -48,8 +48,9 @@ module.exports = function(config) {
         }
 
         config.onFill = config.onFill || {};
+        config.onFill.binds = config.onFill.binds || [];
 
-        for (var i in config.onFill.binds) {
+        for (var i = 0; i < config.onFill.binds.length; ++i) {
             var bindObj = config.onFill.binds[i];
             bindObj.context = self.dom;
             Bind.call(self, bindObj, data[0]);
