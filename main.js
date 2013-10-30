@@ -52,20 +52,7 @@ module.exports = function(config) {
         for (var i in config.onFill.binds) {
             var bindObj = config.onFill.binds[i];
             bindObj.context = self.dom;
-
-            // TODO When will be added this into bind?
-            //      Doesn't support multiple attrs
-            if (bindObj.attr && bindObj.attr[0].name === "value") {
-                var value = bindObj.attr[0].value;
-                if (typeof value === "object") {
-                    // TODO Doesn't support dot notation
-                    value = data[0][value.source];
-                }
-                $(bindObj.target, self.dom).val(value);
-            }
-            else {
-                Bind.call(self, bindObj, data[0]);
-            }
+            Bind.call(self, bindObj, data[0]);
         }
     };
 
