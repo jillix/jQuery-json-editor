@@ -146,6 +146,8 @@ module.exports = function(config) {
         // and remove the errors
         $(".alert-error, .alert-danger", self.dom).remove();
     };
+
+    self.emit("ready", self.config);
 };
 
 /*
