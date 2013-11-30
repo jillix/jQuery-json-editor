@@ -87,7 +87,7 @@ module.exports = function(config) {
             // get the result
             var result = fillFormFilterFunction(self, data, undefined, data);
             // if the result contains an error
-            if (result.error) {
+            if (result && result.error) {
                 // show that error
                 self.showError(result.error);
                 return;
@@ -147,6 +147,7 @@ module.exports = function(config) {
         $(".alert-error, .alert-danger", self.dom).remove();
     };
 
+    // emit ready
     self.emit("ready", self.config);
 };
 
