@@ -1,4 +1,3 @@
-M.wrap('github/IonicaBizau/form-serializer/dev/main.js', function (require, module, exports) {
 var Bind = require("github/jillix/bind");
 var Events = require("github/jillix/events");
 
@@ -183,5 +182,3 @@ function findFunction (parent, dotNot) {
 
     return func;
 }
-
-return module; });

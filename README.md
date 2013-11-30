@@ -9,11 +9,20 @@ Mono module that serialize an form object and emits it.
 
 The event module name is configurable (the default value is `serializedForm`).
 
-```JSON
-{
-    "eventName": "myCustomEventName"
-    "onFill": {
-        "binds": [BIND_OBJECTS]
+```js
+"miidName": {
+    "module": "github/IonicaBizau/form-serializer/version",
+    "roles": [0, 1, ..., n],
+    "config": {
+        "html": "/path/to/html/file.html"
+        "eventName": "editList",
+        "validators": {
+            "fillForm": "namespace.form_serializer.validateData"
+        },
+        "onFill": {
+            "binds": [BIND_OBJECTS]
+        },
+        "listen": {EVENT_OBJECTS}
     }
 }
 ```
@@ -30,9 +39,19 @@ The event module name is configurable (the default value is `serializedForm`).
     </thead>
     <tbody>
         <tr>
-            <td><code>fillForm</code></td>
+            <td><code>fillForm (data)</code></td>
             <td><code>data</code>: an object, as first function parameter. Use <code>config.onFille.binds</code> to fill the form.</td>
             <td>Fill the form using Bind Mono Module. The binds are configurable from <code>config.onFill.binds</code>. See for more information <a href="http://github.com/jillix/bind">Bind</a> module.</td>
+        </tr>
+        <tr>
+            <td><code>showError (err) </code></td>
+            <td><code>err</code>: a string, as first function parameter. It's the error message that appears in the alert</td>
+            <td>Shows an error</td>
+        </tr>
+        <tr>
+            <td><code>clearErrors () </code></td>
+            <td>No parameters</td>
+            <td>Clear all errors</td>
         </tr>
     </tbody>
 </table>
@@ -93,3 +112,11 @@ When the form above will be submitted the following JSON object will be generate
     "visible": false
 }
 ```
+
+# Changelog
+
+### dev
+ - features and fixes go here
+
+### v0.1.0
+ - initial release
