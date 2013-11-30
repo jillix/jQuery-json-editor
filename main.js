@@ -7,6 +7,9 @@ module.exports = function(config) {
     var self = this;
     Events.call(self, config);
 
+    self.config = config;
+    config.validators = config.validators || {};
+
     $(self.dom).on("submit", "form", function (e) {
 
         e.preventDefault();
@@ -37,14 +40,13 @@ module.exports = function(config) {
 
         self.clearErrors();
 
-        if (!data) {
-            self.showError("No list selected.");
-            return;
-        }
-
-        if (data.length > 1) {
-            self.showError("You can't edit multiple lists at same time.");
-            return;
+        var fillFormFilterFunction = findFunction(window, self.config.validators.fillForm);
+        if (typeof fillFormFilterFunction === "function") {
+            var result = filterFunction(self, data, undefined, data);
+            if (result.error) {
+                self.showError(result.error);
+                return;
+            }
         }
 
         config.onFill = config.onFill || {};
@@ -79,5 +81,32 @@ module.exports = function(config) {
         $(".alert-error, .alert-danger", self.dom).remove();
     };
 };
+
+function findValue (parent, dotNot) {
+
+    if (!dotNot) return undefined;
+
+    var splits = dotNot.split(".");
+    var value;
+
+    for (var i = 0; i < splits.length; i++) {
+        value = parent[splits[i]];
+        if (value === undefined) return undefined;
+        if (typeof value === "object") parent = value;
+    }
+
+    return value;
+}
+
+function findFunction (parent, dotNot) {
+
+    var func = findValue(parent, dotNot);
+
+    if (typeof func !== "function") {
+        return undefined;
+    }
+
+    return func;
+}
 
 return module; });
