@@ -10,6 +10,14 @@ module.exports = function(config) {
     // call events
     Events.call(self, config);
 
+    // binds
+    config.binds = config.binds || [];
+
+    // run the binds
+    for (var i = 0; i < config.binds.length; ++i) {
+        Bind.call(self, config.binds[i]);
+    }
+
     // set config in self
     self.config = config;
 
@@ -77,7 +85,7 @@ module.exports = function(config) {
         var fillFormFilterFunction = findFunction(window, self.config.validators.fillForm);
         if (typeof fillFormFilterFunction === "function") {
             // get the result
-            var result = filterFunction(self, data, undefined, data);
+            var result = fillFormFilterFunction(self, data, undefined, data);
             // if the result contains an error
             if (result.error) {
                 // show that error
