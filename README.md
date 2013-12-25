@@ -118,5 +118,8 @@ When the form above will be submitted the following JSON object will be generate
 ### dev
  - features and fixes go here
 
+### v0.1.1
+ - Updated to Events v0.1.8 and Bind v0.2.1
+
 ### v0.1.0
  - initial release
