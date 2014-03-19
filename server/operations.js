@@ -17,17 +17,27 @@ exports.loadForm = function (link) {
       , params = link.params
       ;
 
+    // params.forms owns the form ids
+    if (!params.forms || params.forms.constructor.name !== "Object") {
+        return link.send(400, "params.forms must be an object.");
+    }
+
     // missing form id
     if (!data.formId) {
         return link.send(400, "Missing formId");
     }
 
     // html path
-    var htmlPath = params[data.formId];
+    var htmlPath = params.forms[data.formId];
 
     // invalid form id
     if (!htmlPath) {
         return link.send(400, "Wrong form id.");
+    }
+
+    // handle i18n
+    if (htmlPath.constructor.name === "Object") {
+        htmlPath = htmlPath[link.session._loc] || htmlPath[Object.keys(htmlPath)[0]];
     }
 
     // set the absolute path to the html file
