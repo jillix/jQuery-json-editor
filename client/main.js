@@ -199,6 +199,9 @@ module.exports = function(config) {
             // load it
             setFormHtml(htmlFromCache.html);
 
+            // callback
+            callback (null, htmlFromCache)
+
             // and don't call a server operation anymore
             return;
         }
@@ -219,6 +222,9 @@ module.exports = function(config) {
 
             // set form html
             setFormHtml (htmlToLoad);
+
+            // callback
+            callback (null, response)
         });
     };
 

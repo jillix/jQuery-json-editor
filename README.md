@@ -123,6 +123,9 @@ When the form above will be submitted the following JSON object will be generate
 ### dev
  - features and fixes go here
 
+### v0.1.3
+ - Fixed `loadForm` method callback callback
+
 ### v0.1.2
  - Added `loadForm` method. See [#2](https://github.com/IonicaBizau/form-serializer/pull/2) for details.
 
