@@ -79,34 +79,38 @@ module.exports = function(config) {
         e.preventDefault();
 
         // get submitted form
-        var $form = $(this);
+        var $form = $(this)
 
-        // build serialized form object
-        var serializedForm = {};
+            // build serialized form object
+          , serializedForm = {}
+          ;
 
         // for each data-field
         $form.find("[data-field]").each(function () {
+
             // get the current element
-            var $element = $(this);
+            var $element = $(this)
 
-            // how to get the value?
-            var how = $element.attr("data-value") || "val";
+                // how to get the value?
+              , how = $element.attr("data-value") || "val"
 
-            // get params
-            var params = $element.attr("data-params");
+                // get params
+              , params = $element.attr("data-params")
 
-            // get field
-            var field = $element.attr("data-field");
+                // get field
+              , field = $element.attr("data-field")
 
-
-            // create the value
-            var value;
+                // create the value
+              , value
+              ;
 
             // if params aren't provided
             if (!params) {
+
                 // get the value
                 value = $element[how]();
             } else {
+
                 // get the value using params
                 value = $element[how](params);
             }
@@ -115,7 +119,7 @@ module.exports = function(config) {
             serializedForm[field] = value;
         });
 
-        // emit an eventName of "serializedForm" event
+        // emit an eventName or "serializedForm" event
         self.emit(config.eventName || "serializedForm", serializedForm);
     });
 
