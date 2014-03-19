@@ -1,6 +1,55 @@
-var Bind = require("github/jillix/bind");
-var Events = require("github/jillix/events");
+M.wrap('github/IonicaBizau/form-serializer/dev/main.js', function (require, module, exports) {
 
+// Bind and Events dependencies
+var Bind = require("github/jillix/bind")
+  , Events = require("github/jillix/events")
+  ;
+
+/**
+ *
+ *    Form Serializer Module for Mono
+ *    ===============================
+ *
+ *    Mono module that serialize an form object and emits it.
+ *
+ *    Module configuration
+ *    --------------------
+ *
+ *    The event module name is configurable (the default value is serializedForm).
+ *
+ *    "miidName": {
+ *        "module": "github/IonicaBizau/form-serializer/version",
+ *        "roles": [0, 1, ..., n],
+ *        "config": {
+ *            "html": "/path/to/html/file.html"
+ *            "eventName": "editList",
+ *            "validators": {
+ *                "fillForm": "namespace.form_serializer.validateData"
+ *            },
+ *            "onFill": {
+ *                "binds": [BIND_OBJECTS]
+ *            },
+ *            "listen": {EVENT_OBJECTS}
+ *        }
+ *    }
+ *
+ *    Example
+ *    -------
+ *
+ *    <form>
+ *        <input type="text" data-field="author" value="Ionică Bizău" />
+ *        <input type="checkbox" data-field="visible" data-value="prop" data-params="checked" value="Ionică Bizău" />
+ *    </form>
+ *
+ *    When the form above will be submitted the following JSON object will be generated and emited:
+ *
+ *    {
+ *        "author": "IonicaBizau",
+ *        "visible": false
+ *    }
+ *
+ *
+ */
 module.exports = function(config) {
 
     // get module
@@ -70,10 +119,12 @@ module.exports = function(config) {
         self.emit(config.eventName || "serializedForm", serializedForm);
     });
 
-    /*
+    /**
+     *
      *  Fill form
      *
      *  This fills the form using binds
+     *
      * */
     self.fillForm = function (data) {
 
@@ -82,11 +133,16 @@ module.exports = function(config) {
 
         // if a filter function is provided
         var fillFormFilterFunction = findFunction(window, self.config.validators.fillForm);
+
+        // verify if the foud value is a function
         if (typeof fillFormFilterFunction === "function") {
+
             // get the result
             var result = fillFormFilterFunction(self, data, undefined, data);
+
             // if the result contains an error
             if (result && result.error) {
+
                 // show that error
                 self.showError(result.error);
                 return;
@@ -105,12 +161,16 @@ module.exports = function(config) {
         }
     };
 
-    /*
+    /**
+     *
      *  Show error
+     *
      * */
     self.showError = function (err) {
+
         // if an error is provided
         if (err) {
+
             // create alert div
             var $newAlert = $("<div>");
             $newAlert.addClass("alert fade in danger alert-error alert-danger");
@@ -134,8 +194,10 @@ module.exports = function(config) {
         self.clearErrors.call(self);
     };
 
-    /*
+    /**
+     *
      *  Clear errors
+     *
      * */
     self.clearErrors = function () {
 
@@ -150,8 +212,10 @@ module.exports = function(config) {
     self.emit("ready", self.config);
 };
 
-/*
+/**
+ *
  *  Private functions
+ *
  * */
 
 // find value
@@ -182,3 +246,5 @@ function findFunction (parent, dotNot) {
 
     return func;
 }
+
+return module; });
