@@ -124,6 +124,15 @@ module.exports = function(config) {
     });
 
     /**
+     *  private: setFormHtml
+     *  This will set the form HTML
+     *
+     */
+    function setFormHtml (newHtml) {
+        $("#" + self.miid).html(newHtml);
+    }
+
+    /**
      *
      *  Fill form
      *
@@ -163,6 +172,56 @@ module.exports = function(config) {
             bindObj.context = self.dom;
             Bind.call(self, bindObj, data[0]);
         }
+    };
+
+    /**
+     * form-serializer#loadForm
+     *  This function loads a form dinamically
+     *
+     *  Arguments
+     *    @options: an object containing:
+     *      - formId: the form id that must be loaded
+     *
+     *    @callback: the callback function
+     *
+     */
+    var formCache = {};
+    self.loadForm = function (options, callback) {
+
+        // default callback
+        callback = callback || function () {};
+        options = Object(options);
+
+        // try to get the html from cache
+        var htmlFromCache = formCache[formoptions.formId];
+
+        // found html in cache
+        if (htmlFromCache && typeof htmlFromCache.html === "string") {
+
+            // load it
+            setFormHtml(htmlFromCache.html);
+
+            // and don't call a server operation anymore
+            return;
+        }
+
+        // call the server operation
+        self.link("loadForm", { data: options }, function (err, response) {
+
+            // handle error
+            if (err) {
+                return callback (err, null);
+            }
+
+            // get html
+            var htmlToLoad = response.html;
+
+            // add response in cache
+            formCache[options.formId] = response;
+
+            // set form html
+            setFormHtml (htmlToLoad);
+        });
     };
 
     /**
