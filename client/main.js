@@ -191,7 +191,7 @@ module.exports = function(config) {
         options = Object(options);
 
         // try to get the html from cache
-        var htmlFromCache = formCache[formoptions.formId];
+        var htmlFromCache = formCache[options.formId];
 
         // found html in cache
         if (htmlFromCache && typeof htmlFromCache.html === "string") {
