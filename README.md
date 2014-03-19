@@ -53,6 +53,11 @@ The event module name is configurable (the default value is `serializedForm`).
             <td>No parameters</td>
             <td>Clear all errors</td>
         </tr>
+        <tr>
+            <td><code>loadForm</code></td>
+            <td><code>options</code>: object (formId is required), <code>callback</code>: callback function (optional)</code></td>
+            <td>Loads dinamically a form as pointed in [#2](https://github.com/IonicaBizau/form-serializer/pull/2)</td>
+        </tr>
     </tbody>
 </table>
 
@@ -117,6 +122,9 @@ When the form above will be submitted the following JSON object will be generate
 
 ### dev
  - features and fixes go here
+
+### v0.1.2
+ - Added `loadForm` method. See [#2](https://github.com/IonicaBizau/form-serializer/pull/2) for details.
 
 ### v0.1.1
  - Updated to Events v0.1.8 and Bind v0.2.1
