@@ -118,6 +118,9 @@ module.exports = function(config) {
             serializedForm[field] = value;
         });
 
+        // the object should be unflatten
+        serializedForm = Utils.unflattenObject(serializedForm);
+
         // emit an eventName or "serializedForm" event
         self.emit(config.eventName || "serializedForm", serializedForm);
     });
@@ -164,6 +167,38 @@ module.exports = function(config) {
         // get on fill binds from configuration
         config.onFill = config.onFill || {};
         config.onFill.binds = binds || config.onFill.binds || [];
+
+        // no binds
+        if (!config.onFill.binds.length) {
+
+            var flattenForm = Utils.flattenObject (data)
+              , fields = Object.keys (flattenForm)
+              ;
+
+            // each field
+            for (var i = 0; i < fields.length; ++i) {
+
+                // get the field, params and value
+                var cField = fields[i]
+                  , $field = $("[data-field='" + cField + "']", self.dom)
+                  , dataParams = $field.attr("data-params")
+                  , dataValue = $field.attr("data-value")
+                  , args = []
+                  ;
+
+                // push data params
+                if (dataParams) {
+                    args.push (dataParams);
+                }
+
+                // push value
+                args.push (flattenForm[cField]);
+
+                // set the value
+                $field[dataValue || "val"].apply($field, args);
+            }
+            return;
+        }
 
         // run binds
         for (var i = 0; i < config.onFill.binds.length; ++i) {
