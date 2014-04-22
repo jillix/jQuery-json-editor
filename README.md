@@ -11,8 +11,8 @@ The event module name is configurable (the default value is `serializedForm`).
 
 ```js
 "miidName": {
-    "module": "github/IonicaBizau/form-serializer/version"
-  , "roles": [0, 1, ..., n]
+    "module": "github/IonicaBizau/form-serializer/MODULE_VERSION"
+  , "roles": [MONO_ROLES]
   , "config": {
         "html": "/path/to/html/file.html"
         "eventName": "editList"
@@ -23,6 +23,16 @@ The event module name is configurable (the default value is `serializedForm`).
             "binds": [BIND_OBJECTS]
         }
       , "listen": {EVENT_OBJECTS}
+    }
+  , "operations": {
+        "loadForm": {
+            "roles": [1]
+          , "params": [{
+                "forms": {
+                    "formId1": "/public/html/forms/myForm.html"
+                }
+            }]
+        }
     }
 }
 ```
