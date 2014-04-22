@@ -137,7 +137,7 @@ module.exports = function(config) {
      *  This fills the form using binds
      *
      * */
-    self.fillForm = function (data) {
+    self.fillForm = function (data, binds) {
 
         // clear all errors
         self.clearErrors();
@@ -162,7 +162,7 @@ module.exports = function(config) {
 
         // get on fill binds from configuration
         config.onFill = config.onFill || {};
-        config.onFill.binds = config.onFill.binds || [];
+        config.onFill.binds = binds || config.onFill.binds || [];
 
         // run binds
         for (var i = 0; i < config.onFill.binds.length; ++i) {
