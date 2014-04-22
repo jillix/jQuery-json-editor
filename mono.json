@@ -4,6 +4,7 @@
   , "name": "form-serializer"
   , "dependencies": [
         "/client/main.js"
+      , "/client/converters.js"
       , "github/jillix/utils/v0.1.0"
       , "github/jillix/bind/v0.2.1"
       , "github/jillix/events/v0.1.8"
