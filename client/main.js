@@ -100,6 +100,9 @@ module.exports = function(config) {
                 // get field
               , field = $element.attr("data-field")
 
+                // convert to
+              , convertTo = $element.attr("data-convert-to")
+
                 // create the value
               , value
               ;
@@ -113,6 +116,11 @@ module.exports = function(config) {
 
                 // get the value using params
                 value = $element[how](params);
+            }
+
+            // convert to provided and is a valid value
+            if (convertTo && Converters[convertTo]) {
+                value = Converters[convertTo](value);
             }
 
             // set the value in the serialized form object using the field
