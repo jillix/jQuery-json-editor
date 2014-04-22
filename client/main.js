@@ -1,6 +1,7 @@
-// Bind and Events dependencies
+// dependencies
 var Bind = require("github/jillix/bind")
   , Events = require("github/jillix/events")
+  , Utils = require ("github/jillix/utils")
   ;
 
 /**
@@ -16,18 +17,18 @@ var Bind = require("github/jillix/bind")
  *    The event module name is configurable (the default value is serializedForm).
  *
  *    "miidName": {
- *        "module": "github/IonicaBizau/form-serializer/version",
- *        "roles": [0, 1, ..., n],
- *        "config": {
+ *        "module": "github/IonicaBizau/form-serializer/version"
+ *      , "roles": [0, 1, ..., n]
+ *      , "config": {
  *            "html": "/path/to/html/file.html"
- *            "eventName": "editList",
- *            "validators": {
+ *            "eventName": "editList"
+ *          , "validators": {
  *                "fillForm": "namespace.form_serializer.validateData"
- *            },
- *            "onFill": {
+ *            }
+ *          , "onFill": {
  *                "binds": [BIND_OBJECTS]
- *            },
- *            "listen": {EVENT_OBJECTS}
+ *            }
+ *          , "listen": {EVENT_OBJECTS}
  *        }
  *    }
  *
@@ -42,8 +43,8 @@ var Bind = require("github/jillix/bind")
  *    When the form above will be submitted the following JSON object will be generated and emited:
  *
  *    {
- *        "author": "IonicaBizau",
- *        "visible": false
+ *        "author": "IonicaBizau"
+ *       ,"visible": false
  *    }
  *
  *
@@ -54,14 +55,14 @@ module.exports = function(config) {
     var self = this;
 
     // call events
-    Events.call(self, config);
+    Events.call (self, config);
 
     // binds
     config.binds = config.binds || [];
 
     // run the binds
     for (var i = 0; i < config.binds.length; ++i) {
-        Bind.call(self, config.binds[i]);
+        Bind.call (self, config.binds[i]);
     }
 
     // set config in self
