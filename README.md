@@ -154,6 +154,9 @@ When the form above will be submitted the following JSON object will be generate
 ### dev
  - features and fixes go here
 
+### v0.2.2
+ - Bind v0.2.2 and Utils v0.1.1
+
 ### v0.2.1
  - added `data-delete-if` attribute feature
  - deleted deprecated `findValue` and `findFunction` because util library is already imported and contains these methods
