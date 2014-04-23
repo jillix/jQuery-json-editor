@@ -155,6 +155,9 @@ When the form above will be submitted the following JSON object will be generate
  - features and fixes go here
 
 ### v0.2.2
+ - Updated to Events v0.1.10
+
+### v0.2.2
  - Bind v0.2.2 and Utils v0.1.1
 
 ### v0.2.1
