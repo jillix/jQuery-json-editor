@@ -165,7 +165,7 @@ module.exports = function(config) {
         self.clearErrors();
 
         // if a filter function is provided
-        var fillFormFilterFunction = findFunction(window, self.config.validators.fillForm);
+        var fillFormFilterFunction = Utils.findFunction(window, self.config.validators.fillForm);
 
         // verify if the foud value is a function
         if (typeof fillFormFilterFunction === "function") {
@@ -332,38 +332,3 @@ module.exports = function(config) {
     // emit ready
     self.emit("ready", self.config);
 };
-
-/**
- *
- *  Private functions
- *
- * */
-
-// find value
-function findValue (parent, dotNot) {
-
-    if (!dotNot) return undefined;
-
-    var splits = dotNot.split(".");
-    var value;
-
-    for (var i = 0; i < splits.length; i++) {
-        value = parent[splits[i]];
-        if (value === undefined) return undefined;
-        if (typeof value === "object") parent = value;
-    }
-
-    return value;
-}
-
-// find function
-function findFunction (parent, dotNot) {
-
-    var func = findValue(parent, dotNot);
-
-    if (typeof func !== "function") {
-        return undefined;
-    }
-
-    return func;
-}

@@ -154,6 +154,7 @@ When the form above will be submitted the following JSON object will be generate
 ### dev
  - features and fixes go here
  - added `data-delete-if` attribute feature
+ - deleted deprecated `findValue` and `findFunction` because util library is already imported and contains these methods
 
 ### v0.2.0
  - Added Utils in dependencies
