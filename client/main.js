@@ -103,6 +103,9 @@ module.exports = function(config) {
                 // convert to
               , convertTo = $element.attr("data-convert-to")
 
+                // delete if
+              , deleteIfValue = $element.attr("data-delete-if")
+
                 // create the value
               , value
               ;
@@ -121,6 +124,12 @@ module.exports = function(config) {
             // convert to provided and is a valid value
             if (convertTo && Converters[convertTo]) {
                 value = Converters[convertTo](value);
+                deleteIfValue = Converters[convertTo](deleteIfValue);
+            }
+
+            // verify if value can be added
+            if (value == deleteIfValue) {
+                return;
             }
 
             // set the value in the serialized form object using the field

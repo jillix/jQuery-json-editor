@@ -119,7 +119,14 @@ Place in the module HTML `data-field` and `data-value` atributes.
             </td>
             <td>No default value</td>
             <td>Not required.</td>
-            <td><code>data-params="checked"</code></td>
+            <td><code>data-convert-to="boolean"</code></td>
+        </tr>
+        <tr>
+            <td><code>data-delete-if</code></td>
+            <td>If provided, the field will be deleted if it's equal with the attribute value.</td>
+            <td>No default value</td>
+            <td>Not required.</td>
+            <td><code>data-delete-if=""</code></td>
         </tr>
     </tbody>
 </table>
@@ -146,6 +153,7 @@ When the form above will be submitted the following JSON object will be generate
 
 ### dev
  - features and fixes go here
+ - added `data-delete-if` attribute feature
 
 ### v0.2.0
  - Added Utils in dependencies
