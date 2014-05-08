@@ -128,6 +128,7 @@ module.exports = function(config) {
      */
     function setFormHtml (newHtml) {
         $("#" + self.miid).html(newHtml);
+        self.emit("renderedForm");
     }
 
     /**
