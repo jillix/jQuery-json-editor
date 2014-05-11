@@ -1,6 +1,8 @@
-// Bind and Events dependencies
+// dependencies
 var Bind = require("github/jillix/bind")
   , Events = require("github/jillix/events")
+  , Utils = require ("github/jillix/utils")
+  , Converters = require ("./converters.js")
   ;
 
 /**
@@ -16,18 +18,18 @@ var Bind = require("github/jillix/bind")
  *    The event module name is configurable (the default value is serializedForm).
  *
  *    "miidName": {
- *        "module": "github/IonicaBizau/form-serializer/version",
- *        "roles": [0, 1, ..., n],
- *        "config": {
+ *        "module": "github/IonicaBizau/form-serializer/version"
+ *      , "roles": [0, 1, ..., n]
+ *      , "config": {
  *            "html": "/path/to/html/file.html"
- *            "eventName": "editList",
- *            "validators": {
+ *            "eventName": "editList"
+ *          , "validators": {
  *                "fillForm": "namespace.form_serializer.validateData"
- *            },
- *            "onFill": {
+ *            }
+ *          , "onFill": {
  *                "binds": [BIND_OBJECTS]
- *            },
- *            "listen": {EVENT_OBJECTS}
+ *            }
+ *          , "listen": {EVENT_OBJECTS}
  *        }
  *    }
  *
@@ -42,8 +44,8 @@ var Bind = require("github/jillix/bind")
  *    When the form above will be submitted the following JSON object will be generated and emited:
  *
  *    {
- *        "author": "IonicaBizau",
- *        "visible": false
+ *        "author": "IonicaBizau"
+ *       ,"visible": false
  *    }
  *
  *
@@ -54,14 +56,14 @@ module.exports = function(config) {
     var self = this;
 
     // call events
-    Events.call(self, config);
+    Events.call (self, config);
 
     // binds
     config.binds = config.binds || [];
 
     // run the binds
     for (var i = 0; i < config.binds.length; ++i) {
-        Bind.call(self, config.binds[i]);
+        Bind.call (self, config.binds[i]);
     }
 
     // set config in self
@@ -98,6 +100,12 @@ module.exports = function(config) {
                 // get field
               , field = $element.attr("data-field")
 
+                // convert to
+              , convertTo = $element.attr("data-convert-to")
+
+                // delete if
+              , deleteIfValue = $element.attr("data-delete-if")
+
                 // create the value
               , value
               ;
@@ -113,9 +121,23 @@ module.exports = function(config) {
                 value = $element[how](params);
             }
 
+            // convert to provided and is a valid value
+            if (convertTo && Converters[convertTo]) {
+                value = Converters[convertTo](value);
+                deleteIfValue = Converters[convertTo](deleteIfValue);
+            }
+
+            // verify if value can be added
+            if (value == deleteIfValue) {
+                return;
+            }
+
             // set the value in the serialized form object using the field
             serializedForm[field] = value;
         });
+
+        // the object should be unflatten
+        serializedForm = Utils.unflattenObject(serializedForm);
 
         // emit an eventName or "serializedForm" event
         self.emit(config.eventName || "serializedForm", serializedForm);
@@ -130,23 +152,28 @@ module.exports = function(config) {
      */
     function setFormHtml (newHtml) {
         $("#" + self.miid).html(newHtml);
+        self.emit("renderedForm", $("#" + self.miid).html());
     }
 
     /**
      * fillForm
      * This function fills the form using @data provided and the binds
-     * set in configuration
+     * set in configuration.
+     *
+     * If no binds are provided, the module will try to set the values via
+     * dot notation.
      *
      * @param data
+     * @param binds
      * @return
      */
-    self.fillForm = function (data) {
+    self.fillForm = function (data, binds) {
 
         // clear all errors
         self.clearErrors();
 
         // if a filter function is provided
-        var fillFormFilterFunction = findFunction(window, self.config.validators.fillForm);
+        var fillFormFilterFunction = Utils.findFunction(window, self.config.validators.fillForm);
 
         // verify if the foud value is a function
         if (typeof fillFormFilterFunction === "function") {
@@ -165,7 +192,39 @@ module.exports = function(config) {
 
         // get on fill binds from configuration
         config.onFill = config.onFill || {};
-        config.onFill.binds = config.onFill.binds || [];
+        config.onFill.binds = binds || config.onFill.binds || [];
+
+        // no binds
+        if (!config.onFill.binds.length) {
+
+            var flattenForm = Utils.flattenObject (data)
+              , fields = Object.keys (flattenForm)
+              ;
+
+            // each field
+            for (var i = 0; i < fields.length; ++i) {
+
+                // get the field, params and value
+                var cField = fields[i]
+                  , $field = $("[data-field='" + cField + "']", self.dom)
+                  , dataParams = $field.attr("data-params")
+                  , dataValue = $field.attr("data-value")
+                  , args = []
+                  ;
+
+                // push data params
+                if (dataParams) {
+                    args.push (dataParams);
+                }
+
+                // push value
+                args.push (flattenForm[cField]);
+
+                // set the value
+                $field[dataValue || "val"].apply($field, args);
+            }
+            return;
+        }
 
         // run binds
         for (var i = 0; i < config.onFill.binds.length; ++i) {
@@ -281,38 +340,3 @@ module.exports = function(config) {
     // emit ready
     self.emit("ready", self.config);
 };
-
-/**
- *
- *  Private functions
- *
- * */
-
-// find value
-function findValue (parent, dotNot) {
-
-    if (!dotNot) return undefined;
-
-    var splits = dotNot.split(".");
-    var value;
-
-    for (var i = 0; i < splits.length; i++) {
-        value = parent[splits[i]];
-        if (value === undefined) return undefined;
-        if (typeof value === "object") parent = value;
-    }
-
-    return value;
-}
-
-// find function
-function findFunction (parent, dotNot) {
-
-    var func = findValue(parent, dotNot);
-
-    if (typeof func !== "function") {
-        return undefined;
-    }
-
-    return func;
-}

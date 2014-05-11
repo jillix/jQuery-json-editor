@@ -1,13 +1,15 @@
 {
-    "source": "github",
-    "owner": "IonicaBizau",
-    "name": "form-serializer",
-    "dependencies": [
-        "/client/main.js",
-        "github/jillix/bind/v0.2.1",
-        "github/jillix/events/v0.1.8"
-    ],
-    "operations": [
+    "source": "github"
+  , "owner": "IonicaBizau"
+  , "name": "form-serializer"
+  , "dependencies": [
+        "/client/main.js"
+      , "/client/converters.js"
+      , "github/jillix/utils/v0.1.1"
+      , "github/jillix/bind/v0.2.2"
+      , "github/jillix/events/v0.1.10"
+    ]
+  , "operations": [
         { "file": "server/operations.js", "function": "loadForm" }
     ]
 }

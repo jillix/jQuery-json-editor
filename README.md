@@ -11,18 +11,28 @@ The event module name is configurable (the default value is `serializedForm`).
 
 ```js
 "miidName": {
-    "module": "github/IonicaBizau/form-serializer/version",
-    "roles": [0, 1, ..., n],
-    "config": {
+    "module": "github/IonicaBizau/form-serializer/MODULE_VERSION"
+  , "roles": [MONO_ROLES]
+  , "config": {
         "html": "/path/to/html/file.html"
-        "eventName": "editList",
-        "validators": {
+        "eventName": "editList"
+      , "validators": {
             "fillForm": "namespace.form_serializer.validateData"
-        },
-        "onFill": {
+        }
+      , "onFill": {
             "binds": [BIND_OBJECTS]
-        },
-        "listen": {EVENT_OBJECTS}
+        }
+      , "listen": {EVENT_OBJECTS}
+    }
+  , "operations": {
+        "loadForm": {
+            "roles": [1]
+          , "params": [{
+                "forms": {
+                    "formId1": "/public/html/forms/myForm.html"
+                }
+            }]
+        }
     }
 }
 ```
@@ -97,6 +107,27 @@ Place in the module HTML `data-field` and `data-value` atributes.
             <td>Not required.</td>
             <td><code>data-params="checked"</code></td>
         </tr>
+        <tr>
+            <td><code>data-convert-to</code></td>
+            <td>
+                The data type. Can be one of the following values:
+                <ul>
+                    <li><code>string</code></li>
+                    <li><code>number</code></li>
+                    <li><code>boolean</code></li>
+                </ul>
+            </td>
+            <td>No default value</td>
+            <td>Not required.</td>
+            <td><code>data-convert-to="boolean"</code></td>
+        </tr>
+        <tr>
+            <td><code>data-delete-if</code></td>
+            <td>If provided, the field will be deleted if it's equal with the attribute value.</td>
+            <td>No default value</td>
+            <td>Not required.</td>
+            <td><code>data-delete-if=""</code></td>
+        </tr>
     </tbody>
 </table>
 
@@ -113,8 +144,8 @@ When the form above will be submitted the following JSON object will be generate
 
 ```JSON
 {
-    "author": "IonicaBizau",
-    "visible": false
+    "author": "IonicaBizau"
+  , "visible": false
 }
 ```
 
@@ -122,6 +153,24 @@ When the form above will be submitted the following JSON object will be generate
 
 ### dev
  - features and fixes go here
+
+### v0.2.3
+ - Updated to Events v0.1.10
+
+### v0.2.2
+ - Bind v0.2.2 and Utils v0.1.1
+
+### v0.2.1
+ - added `data-delete-if` attribute feature
+ - deleted deprecated `findValue` and `findFunction` because util library is already imported and contains these methods
+
+### v0.2.0
+ - Added Utils in dependencies
+ - Added LICENSE
+ - Upgraded Events module
+ - Added Converters (see `data-convert-to`)
+ - Added dot notation feature
+ - Override `config.onFill.binds` if a second argument is provided in `fillForm` function
 
 ### v0.1.3
  - Fixed `loadForm` method callback callback
