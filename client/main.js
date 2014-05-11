@@ -241,7 +241,6 @@ module.exports = function(config) {
             // create alert div
             var $newAlert = $("<div>");
             $newAlert.addClass("alert fade in danger alert-error alert-danger");
-            $newAlert.append("<button type='button' class='close' data-dismiss='alert'>×</button>");
 
             // append the error
             $newAlert.append(err);
