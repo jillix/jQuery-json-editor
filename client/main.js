@@ -122,21 +122,24 @@ module.exports = function(config) {
     });
 
     /**
-     *  private: setFormHtml
-     *  This will set the form HTML
+     * setFormHtml
+     * This will set the form HTML
      *
+     * @param newHtml: the new HTML of the module
+     * @return
      */
     function setFormHtml (newHtml) {
         $("#" + self.miid).html(newHtml);
     }
 
     /**
+     * fillForm
+     * This function fills the form using @data provided and the binds
+     * set in configuration
      *
-     *  Fill form
-     *
-     *  This fills the form using binds
-     *
-     * */
+     * @param data
+     * @return
+     */
     self.fillForm = function (data) {
 
         // clear all errors
@@ -173,15 +176,13 @@ module.exports = function(config) {
     };
 
     /**
-     * form-serializer#loadForm
-     *  This function loads a form dinamically
+     * loadForm
+     * This function loads a form dinamically
      *
-     *  Arguments
-     *    @options: an object containing:
-     *      - formId: the form id that must be loaded
-     *
-     *    @callback: the callback function
-     *
+     * @param options: object containing:
+     *  - formId: the form id that must be loaded
+     * @param callback: the callback function
+     * @return
      */
     var formCache = {};
     self.loadForm = function (options, callback) {
@@ -229,14 +230,16 @@ module.exports = function(config) {
     };
 
     /**
+     * showError
+     * Shows an error
      *
-     *  Show error
-     *
-     * */
+     * @param err: string containing the error message. If undefined, the errors will be cleared.
+     * @return
+     */
     self.showError = function (err) {
 
         // if an error is provided
-        if (err) {
+        if (typeof err === "string") {
 
             // create alert div
             var $newAlert = $("<div>");
@@ -261,10 +264,11 @@ module.exports = function(config) {
     };
 
     /**
+     * clearErrors
+     * Clear errors
      *
-     *  Clear errors
-     *
-     * */
+     * @return
+     */
     self.clearErrors = function () {
 
         // show the form
