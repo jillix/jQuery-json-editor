@@ -152,7 +152,6 @@ module.exports = function(config) {
      */
     function setFormHtml (newHtml) {
         $("#" + self.miid).html(newHtml);
-        self.emit("renderedForm", $("#" + self.miid).html());
     }
 
     /**
@@ -257,7 +256,7 @@ module.exports = function(config) {
         if (htmlFromCache && typeof htmlFromCache.html === "string") {
 
             // load it
-            setFormHtml(htmlFromCache.html);
+            setFormHtml(htmlFromCache.html.clone());
 
             // callback
             callback (null, htmlFromCache)
@@ -270,12 +269,10 @@ module.exports = function(config) {
         self.link("loadForm", { data: options }, function (err, response) {
 
             // handle error
-            if (err) {
-                return callback (err, null);
-            }
+            if (err) { return callback (err, null); }
 
             // get html
-            var htmlToLoad = response.html;
+            var htmlToLoad = response.html = $(response.html, "#" + self.miid);
 
             // add response in cache
             formCache[options.formId] = response;
