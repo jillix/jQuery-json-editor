@@ -154,6 +154,12 @@ When the form above will be submitted the following JSON object will be generate
 ### dev
  - features and fixes go here
 
+### v0.2.5
+ - Updated to Events v0.1.11 and Utils v0.1.2
+
+### v0.2.4
+ - Removed close button from alert
+
 ### v0.2.3
  - Updated to Events v0.1.10
 

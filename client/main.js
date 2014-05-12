@@ -1,9 +1,8 @@
 // dependencies
-var Bind = require("github/jillix/bind")
-  , Events = require("github/jillix/events")
-  , Utils = require ("github/jillix/utils")
-  , Converters = require ("./converters.js")
-  ;
+var Bind = require("github/jillix/bind");
+var Events = require("github/jillix/events");
+var Utils = require("github/jillix/utils");
+var Converters = require("./converters.js");
 
 /**
  *
@@ -337,3 +336,4 @@ module.exports = function(config) {
     // emit ready
     self.emit("ready", self.config);
 };
+
