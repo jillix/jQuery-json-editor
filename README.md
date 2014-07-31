@@ -154,6 +154,9 @@ When the form above will be submitted the following JSON object will be generate
 ### dev
  - features and fixes go here
 
+### v0.3.0
+ - Upgraded deps
+
 ### v0.2.5
  - Updated to Events v0.1.11 and Utils v0.1.2
 
