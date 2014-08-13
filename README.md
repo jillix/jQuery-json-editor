@@ -154,6 +154,10 @@ When the form above will be submitted the following JSON object will be generate
 ### dev
  - features and fixes go here
 
+### v0.3.1
+ - Changed owner to jillix
+ - Updated to Bind `v0.3.1`
+
 ### v0.3.0
  - Upgraded deps
 
