@@ -11,7 +11,7 @@ The event module name is configurable (the default value is `serializedForm`).
 
 ```js
 "miidName": {
-    "module": "github/IonicaBizau/form-serializer/MODULE_VERSION"
+    "module": "github/jillix/form-serializer/MODULE_VERSION"
   , "roles": [MONO_ROLES]
   , "config": {
         "html": "/path/to/html/file.html"
@@ -66,7 +66,7 @@ The event module name is configurable (the default value is `serializedForm`).
         <tr>
             <td><code>loadForm</code></td>
             <td><code>options</code>: object (formId is required), <code>callback</code>: callback function (optional)</code></td>
-            <td>Loads dinamically a form as pointed in [#2](https://github.com/IonicaBizau/form-serializer/pull/2)</td>
+            <td>Loads dinamically a form as pointed in [#2](https://github.com/jillix/form-serializer/pull/2)</td>
         </tr>
     </tbody>
 </table>
@@ -189,7 +189,7 @@ When the form above will be submitted the following JSON object will be generate
  - Fixed `loadForm` method callback callback
 
 ### v0.1.2
- - Added `loadForm` method. See [#2](https://github.com/IonicaBizau/form-serializer/pull/2) for details.
+ - Added `loadForm` method. See [#2](https://github.com/jillix/form-serializer/pull/2) for details.
 
 ### v0.1.1
  - Updated to Events v0.1.8 and Bind v0.2.1
