@@ -1,54 +1,18 @@
-// dependencies
-var Bind = require("github/jillix/bind");
-var Events = require("github/jillix/events");
-var Utils = require("github/jillix/utils");
-var Converters = require("./converters.js");
+var Converters =  {
+    string: function (value) {
+        return value.toString();
+    },
+    number: function (value) {
+        return Number (value);
+    },
+    boolean: function (value) {
+        return (value === true || value === "true" || value === "on" || typeof value == "number" && value > 0 || value === "1");
+    }
+};
 
-/**
- *
- *    Form Serializer Module for Mono
- *    ===============================
- *
- *    Mono module that serialize an form object and emits it.
- *
- *    Module configuration
- *    --------------------
- *
- *    The event module name is configurable (the default value is serializedForm).
- *
- *    "miidName": {
- *        "module": "github/IonicaBizau/form-serializer/version"
- *      , "roles": [0, 1, ..., n]
- *      , "config": {
- *            "html": "/path/to/html/file.html"
- *            "eventName": "editList"
- *          , "validators": {
- *                "fillForm": "namespace.form_serializer.validateData"
- *            }
- *          , "onFill": {
- *                "binds": [BIND_OBJECTS]
- *            }
- *          , "listen": {EVENT_OBJECTS}
- *        }
- *    }
- *
- *    Example
- *    -------
- *
- *    <form>
- *        <input type="text" data-field="author" value="Ionică Bizău" />
- *        <input type="checkbox" data-field="visible" data-value="prop" data-params="checked" value="Ionică Bizău" />
- *    </form>
- *
- *    When the form above will be submitted the following JSON object will be generated and emited:
- *
- *    {
- *        "author": "IonicaBizau"
- *       ,"visible": false
- *    }
- *
- *
- */
+// export converters
+module.exports = converters;
+
 module.exports = function(config) {
 
     // get module
