@@ -1,303 +1,269 @@
-var Converters =  {
-    string: function (value) {
-        return value.toString();
-    },
-    number: function (value) {
-        return Number (value);
-    },
-    boolean: function (value) {
-        return (value === true || value === "true" || value === "on" || typeof value == "number" && value > 0 || value === "1");
-    }
-};
+(function ($) {
 
-// export converters
-module.exports = converters;
 
-module.exports = function(config) {
+    /**
+     * flattenObject
+     * Converts an object to a flat one
+     *
+     * @name flattenObject
+     * @function
+     * @param {Object} obj The object that should be converted
+     * @return {Object} Flatten object
+     */
+    function flattenObject(obj) {
 
-    // get module
-    var self = this;
+        var result = {};
 
-    // call events
-    Events.call (self, config);
+        for (var key in obj) {
+            if (!obj.hasOwnProperty(key)) continue;
 
-    // binds
-    config.binds = config.binds || [];
+            if (obj[key] && obj[key].constructor === Object) {
+                var flat = flattenObject (obj[key]);
+                for (var x in flat) {
+                    if (!flat.hasOwnProperty(x)) {
+                         continue;
+                    }
 
-    // run the binds
-    for (var i = 0; i < config.binds.length; ++i) {
-        Bind.call (self, config.binds[i]);
-    }
-
-    // set config in self
-    self.config = config;
-
-    // set validators value
-    config.validators = config.validators || {};
-
-    // on form submit
-    $(self.dom).on("submit", "form", function (e) {
-
-        // prevent default browser behavior
-        e.preventDefault();
-
-        // get submitted form
-        var $form = $(this)
-
-            // build serialized form object
-          , serializedForm = {}
-          ;
-
-        // for each data-field
-        $form.find("[data-field]").each(function () {
-
-            // get the current element
-            var $element = $(this)
-
-                // how to get the value?
-              , how = $element.attr("data-value") || "val"
-
-                // get params
-              , params = $element.attr("data-params")
-
-                // get field
-              , field = $element.attr("data-field")
-
-                // convert to
-              , convertTo = $element.attr("data-convert-to")
-
-                // delete if
-              , deleteIfValue = $element.attr("data-delete-if")
-
-                // create the value
-              , value
-              ;
-
-            // if params aren't provided
-            if (!params) {
-
-                // get the value
-                value = $element[how]();
+                    result[key + '.' + x] = flat[x];
+                }
             } else {
-
-                // get the value using params
-                value = $element[how](params);
+                result[key] = obj[key];
             }
-
-            // convert to provided and is a valid value
-            if (convertTo && Converters[convertTo]) {
-                value = Converters[convertTo](value);
-                deleteIfValue = Converters[convertTo](deleteIfValue);
-            }
-
-            // verify if value can be added
-            if (value == deleteIfValue) {
-                return;
-            }
-
-            // set the value in the serialized form object using the field
-            serializedForm[field] = value;
-        });
-
-        // the object should be unflatten
-        serializedForm = Utils.unflattenObject(serializedForm);
-
-        // emit an eventName or "serializedForm" event
-        self.emit(config.eventName || "serializedForm", serializedForm);
-    });
-
-    /**
-     * setFormHtml
-     * This will set the form HTML
-     *
-     * @param newHtml: the new HTML of the module
-     * @return
-     */
-    function setFormHtml (newHtml) {
-        $("#" + self.miid).html(newHtml);
+        }
+        return result;
     }
 
     /**
-     * fillForm
-     * This function fills the form using @data provided and the binds
-     * set in configuration.
+     * unflattenObject
+     * Converts a flat object to an unflatten one
      *
-     * If no binds are provided, the module will try to set the values via
-     * dot notation.
-     *
-     * @param data
-     * @param binds
-     * @return
+     * @name unflattenObject
+     * @function
+     * @param {Object} flat The flat object that should be converted
+     * @return {Object} Unflatten object
      */
-    self.fillForm = function (data, binds) {
+    function unflattenObject(flat) {
 
-        // clear all errors
-        self.clearErrors();
+        var result = {};
+        var parentObj = result;
 
-        // if a filter function is provided
-        var fillFormFilterFunction = Utils.findFunction(window, self.config.validators.fillForm);
+        var keys = Object.keys(flat);
+        for (var i = 0; i < keys.length; ++i) {
 
-        // verify if the foud value is a function
-        if (typeof fillFormFilterFunction === "function") {
+            var key = keys[i];
+            var subkeys = key.split('.');
+            var last = subkeys.pop();
 
-            // get the result
-            var result = fillFormFilterFunction(self, data, undefined, data);
+            for (var ii = 0; ii < subkeys.length; ++ii) {
+                var subkey = subkeys[ii];
+                parentObj[subkey] = typeof parentObj[subkey] === 'undefined' ? {} : parentObj[subkey];
+                parentObj = parentObj[subkey];
+            }
 
-            // if the result contains an error
-            if (result && result.error) {
+            parentObj[last] = flat[key];
+            parentObj = result;
+        }
 
-                // show that error
-                self.showError(result.error);
-                return;
+        return result;
+    }
+
+    function getTypeOf(o) {
+
+        var types = {
+            "undefined"                          : "undefined",
+            "number"                             : "number",
+            "boolean"                            : "boolean",
+            "string"                             : "string",
+            "[object Function]"                  : "function",
+            "[object RegExp]"                    : "regexp",
+            "function Array() { [native code] }" : "array",
+            "function Date() { [native code] }"  : "date",
+            "[object Error]"                     : "error"
+        };
+
+        return types[o && o.constructor] || types[typeof o] || types[o] || (o ? "object" : "null");
+    }
+
+    function mergeRecursive (obj1, obj2) {
+        for (var p in obj2) {
+            try {
+                if (obj2[p].constructor == Object) {
+                    obj1[p] = mergeRecursive(obj1[p], obj2[p]);
+                } else {
+                    obj1[p] = obj2[p];
+                }
+            } catch (e) {
+                obj1[p] = obj2[p];
             }
         }
 
-        // get on fill binds from configuration
-        config.onFill = config.onFill || {};
-        config.onFill.binds = binds || config.onFill.binds || [];
+        return obj1;
+    }
 
-        // no binds
-        if (!config.onFill.binds.length) {
+    var JsonEdit = $.fn.jsonEdit = function (opt_options) {
 
-            var flattenForm = Utils.flattenObject (data)
-              , fields = Object.keys (flattenForm)
-              ;
+        var settings = $.extend({
+            data: {},
+            schema: {},
+            container: this
+        }, opt_options);
 
-            // each field
-            for (var i = 0; i < fields.length; ++i) {
-
-                // get the field, params and value
-                var cField = fields[i]
-                  , $field = $("[data-field='" + cField + "']", self.dom)
-                  , dataParams = $field.attr("data-params")
-                  , dataValue = $field.attr("data-value")
-                  , args = []
-                  ;
-
-                // push data params
-                if (dataParams) {
-                    args.push (dataParams);
+        var self = {
+            ui: $.extend(JsonEdit.ui, opt_options.ui),
+            labels: $.extend(JsonEdit.labels, opt_options.labels),
+            groups: $.extend(JsonEdit.groups, opt_options.groups),
+            inputs: $.extend(JsonEdit.inputs, opt_options.inputs),
+            converters: $.extend(JsonEdit.converters, opt_options.converters),
+            createGroup: function (obj) {
+                if (obj.type === "array") {
+                    // TODO Long story here
+                    return;
+                }
+                var $group = self.groups[obj.type].clone(true);
+                // TODO Configurable
+                $group.find("label").append(self.labels[obj.type].clone(true).text(obj.label));
+                var $input = self.inputs[obj.type].clone(true).attr({
+                    "data-json-editor-path": obj.path
+                }).appendTo($group.find("label"));
+                if (obj.type === "boolean") {
+                    $input.prop("checked", obj.value);
+                } else if (obj.type === "date") {
+                    $input[0].valueAsDate = obj.value;
+                } else {
+                    $input.val(obj.value);
                 }
 
-                // push value
-                args.push (flattenForm[cField]);
+                return $group;
+            },
+            elms: {}
+        };
 
-                // set the value
-                $field[dataValue || "val"].apply($field, args);
+        function sch(obj, out, path) {
+
+            var schema = out || {};
+            path = path || "";
+
+            var t = getTypeOf(obj);
+            if (t !== "object") {
+                return {
+                    type: t
+                };
+            } else {
+                for (var k in obj) {
+                    var c = obj[k];
+                    t = getTypeOf(c)
+
+                    if (t === "array") {
+                        schema[path + k] = [sch(c[0], schema, path + k)];
+                        continue;
+                    }
+
+                    if (t === "object") {
+                        sch(c, schema, path + k + ".");
+                        continue;
+                    }
+
+                    schema[path + k] = {
+                        type: t
+                    };
+                }
             }
-            return;
+
+            return schema;
         }
 
-        // run binds
-        for (var i = 0; i < config.onFill.binds.length; ++i) {
-            var bindObj = config.onFill.binds[i];
-            bindObj.context = self.dom;
-            Bind.call(self, bindObj, data[0]);
+        settings.schema = mergeRecursive(sch(settings.data), settings.schema);
+        settings.data = flattenObject(settings.data);
+
+        for (var k in settings.schema) {
+            var c = settings.schema[k];
+            if (getTypeOf(c) === "array") {
+                // TODO
+                continue;
+            }
+            c.label = c.label || k;
+            c.path = k;
+        }
+
+        for (var k in settings.schema) {
+            var c = settings.schema[k];
+            if (getTypeOf(c) === "array") {
+                // TODO
+                continue;
+            }
+            settings.container.append(self.createGroup({
+                value: settings.data[c.path],
+                type: c.type,
+                label: c.label,
+                path: c.path
+            }));
+        }
+
+        self.getData = function () {
+            var data = {};
+            $("[data-json-editor-path]", settings.container).each(function () {
+                var $this = $(this);
+                var path = $this.attr("data-json-editor-path");
+                if ($this.attr("type") === "checkbox") {
+                    data[path] = $this.prop("checked");
+                } else {
+                    data[path] = $this.val();
+                }
+
+                var converter = self.converters[settings.schema[path].type];
+                if (typeof converter === "function") {
+                    data[path] = converter(data[path]);
+                }
+            });
+            return unflattenObject(data);
+        };
+
+        return self;
+    };
+
+    JsonEdit.converters = {
+        boolean: function (value) {
+            return (value === true || value === "true" || value === "on" || typeof value == "number" && value > 0 || value === "1");
+        },
+        string: function (value) {
+            return value.toString();
+        },
+        number: function (value) {
+            return Number (value);
+        },
+        regexp: function (value) {
+            return new RegExp(value);
+        },
+        date: function (value) {
+            return new Date(value);
         }
     };
 
-    /**
-     * loadForm
-     * This function loads a form dinamically
-     *
-     * @param options: object containing:
-     *  - formId: the form id that must be loaded
-     * @param callback: the callback function
-     * @return
-     */
-    var formCache = {};
-    self.loadForm = function (options, callback) {
-
-        // default callback
-        callback = callback || function () {};
-        options = Object(options);
-
-        // try to get the html from cache
-        var htmlFromCache = formCache[options.formId];
-
-        // found html in cache
-        if (htmlFromCache && typeof htmlFromCache.html === "string") {
-
-            // load it
-            setFormHtml(htmlFromCache.html.clone());
-
-            // callback
-            callback (null, htmlFromCache)
-
-            // and don't call a server operation anymore
-            return;
-        }
-
-        // call the server operation
-        self.link("loadForm", { data: options }, function (err, response) {
-
-            // handle error
-            if (err) { return callback (err, null); }
-
-            // get html
-            var htmlToLoad = response.html = $(response.html, "#" + self.miid);
-
-            // add response in cache
-            formCache[options.formId] = response;
-
-            // set form html
-            setFormHtml (htmlToLoad);
-
-            // callback
-            callback (null, response)
-        });
+    JsonEdit.groups = {
+        "number":   $("<div>").append($("<label>")),
+        "boolean":  $("<div>").append($("<label>")),
+        "string":   $("<div>").append($("<label>")),
+        "regexp":   $("<div>").append($("<label>")),
+        "array":    $("<div>").append($("<label>")),
+        "date":     $("<div>").append($("<label>"))
     };
 
-    /**
-     * showError
-     * Shows an error
-     *
-     * @param err: string containing the error message. If undefined, the errors will be cleared.
-     * @return
-     */
-    self.showError = function (err) {
-
-        // if an error is provided
-        if (typeof err === "string") {
-
-            // create alert div
-            var $newAlert = $("<div>");
-            $newAlert.addClass("alert fade in danger alert-error alert-danger");
-
-            // append the error
-            $newAlert.append(err);
-
-            // append the aller before the form
-            $("form", self.dom).before($newAlert);
-
-            // show it
-            $newAlert.fadeIn();
-
-            // and hide the form
-            $("form", self.dom).hide();
-            return;
-        }
-
-        // if no error is provided, clearErrors
-        self.clearErrors.call(self);
+    JsonEdit.labels = {
+        "number": $("<span>"),
+        "boolean": $("<span>"),
+        "string": $("<span>"),
+        "regexp": $("<span>"),
+        "array": $("<span>"),
+        "date": $("<span>")
     };
 
-    /**
-     * clearErrors
-     * Clear errors
-     *
-     * @return
-     */
-    self.clearErrors = function () {
-
-        // show the form
-        $("form", self.dom).show();
-
-        // and remove the errors
-        $(".alert-error, .alert-danger", self.dom).remove();
+    JsonEdit.inputs = {
+        "number": $("<input>", {type: "number"}),
+        "boolean": $("<input>", {type: "checkbox"}),
+        "string": $("<input>", {type: "text"}),
+        "regexp": $("<input>", {type: "text"}),
+        "array": $("<input>", {type: "text"}),
+        "date": $("<input>", {type: "date"})
     };
-
-    // emit ready
-    self.emit("ready", self.config);
-};
+})($);
 
