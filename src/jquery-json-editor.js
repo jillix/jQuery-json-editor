@@ -284,7 +284,9 @@
                 // TODO Configurable
                 var $headers = null;
                 var $tbody = null;
-                $input = $("<table>").append([
+                $input = $("<table>", {
+                    "border": "1"
+                }).append([
                     $headers = $("<thead>").append("<tr>"),
                     $tbody = $("<tbody>")
                 ]);
@@ -317,7 +319,6 @@
                              type: sch.type,
                              path: sch.path.replace(new RegExp("^.?" + field.name + "."), field.name + "." + i + "."),
                              schema: sch.schema,
-                             label: sch.label,
                              name: sch.name
                          })));
                       }
