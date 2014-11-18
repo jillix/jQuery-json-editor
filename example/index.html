@@ -9,8 +9,69 @@
     </head>
     <body>
         <h1>Awesome Form</h1>
+        <div>
+            <label>
+                <span>Input Data:</span><br>
+                <textarea cols="60" rows="20" style="width:100%" id="inputData">
+a = {
+    data: {
+        age: 19,
+        country: "Romania",
+        name: {
+            first: "Johnny",
+            last: "B."
+        },
+        student: true,
+        hobbies: ["piano", "blogging"],
+        born: new Date(1995, 9, 14),
+        keyboars: [
+            {
+                manufacturer: "Yamaha",
+                type: "PSR8000",
+                pianoKeys: false,
+                digital: true
+            },
+            {
+                manufacturer: "Yamaha",
+                type: "P95",
+                pianoKeys: true,
+                digital: true
+            }
+        ]
+    },
+    schema: {
+        age: { label: "Age" },
+        country: { label: "Country" },
+        name: {
+            label: " ",
+            schema: {
+                first: { label: "First Name" },
+                last: { label: "Last Name" }
+            }
+        },
+        student: { label: "Student" },
+        hobbies: { label: "Hobbies" },
+        born: { label: "Born" },
+        keyboars: {
+            label: "Keyboards",
+            schema: {
+                manufacturer: { label: "Manufacturer" },
+                type: { label: "Type" },
+                pianoKeys: { label: "Piano Keys" },
+                digital: { label: "Digital" },
+            }
+        },
+        born: { label: "Born Date" }
+    }
+}</textarea>
+            </label>
+        </div>
+
+        <button id="updateForm">Update Form</button>
+        <hr>
+
         <div class="first-form"></div>
-        <button>Get Data</button>
+        <button id="getData">Get Data</button>
         <pre></pre>
     </body>
 </html>
