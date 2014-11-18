@@ -26,9 +26,26 @@ $(function () {
             ]
         },
         schema: {
-            born: {
-                label: "Born Date"
-            }
+            age: { label: "Age" },
+            country: { label: "Country" },
+            name: {
+                schema: {
+                    first: { label: "First Name" },
+                    last: { label: "Last Name" }
+                }
+            },
+            student: { label: "Student" },
+            hobbies: { label: "Hobbies" },
+            born: { label: "Born" },
+            keyboars: {
+                schema: {
+                    manufacturer: { label: "Manufacturer" },
+                    type: { label: "Type" },
+                    pianoKeys: { label: "Piano Keys" },
+                    digital: { label: "Digital" },
+                }
+            },
+            born: { label: "Born Date" }
         }
     });
 
