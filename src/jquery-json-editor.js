@@ -378,7 +378,7 @@
             function create(obj) {
                 for (var k in obj) {
                     var c = obj[k];
-                    settings.container.append(self.createGroup(c));
+                    self.container.append(self.createGroup(c));
                 }
             }
 
@@ -395,7 +395,7 @@
          */
         self.getData = function () {
             var data = {};
-            $("[data-json-editor-path]", settings.container).each(function () {
+            $("[data-json-editor-path]", self.container).each(function () {
                 var $this = $(this);
                 var type = $(this).attr("data-json-editor-type");
                 var path = $this.attr("data-json-editor-path");
