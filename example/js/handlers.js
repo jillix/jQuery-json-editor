@@ -9,7 +9,17 @@ $(function () {
             },
             student: true,
             born: new Date(1995, 9, 14),
-            hobbies: ["piano", "blogging"]
+            hobbies: ["piano", "blogging"],
+            keyboars: [
+                {
+                    manufacturer: "Yamaha",
+                    type: "PSR8000"
+                },
+                {
+                    manufacturer: "Yamaha",
+                    type: "P95"
+                }
+            ]
         },
         schema: {
             born: {
@@ -17,6 +27,19 @@ $(function () {
             }
         }
     });
+
+    /**
+     *  Schema:
+     *  {
+     *      age: { type: "number" },
+     *      name.country: { type: "string" }
+     *      ...
+     *      hobbies: { type: "array", schema: {
+     *          type: "string"
+     *      }},
+     *  }
+     *
+     * */
 
     $("button").on("click", function () {
         console.log(firstForm.getData());

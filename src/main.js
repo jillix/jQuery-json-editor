@@ -153,13 +153,11 @@
                     var c = obj[k];
                     t = getTypeOf(c)
 
-                    if (t === "array") {
-                        schema[path + k] = [sch(c[0], schema, path + k)];
-                        continue;
-                    }
-
-                    if (t === "object") {
-                        sch(c, schema, path + k + ".");
+                    if (t === "array" || t === "object") {
+                        schema[path + k] = {
+                            schema: t === "array" ? sch(c[0]) : sch(c),
+                            type: t
+                        };
                         continue;
                     }
 
@@ -175,15 +173,21 @@
         settings.schema = mergeRecursive(sch(settings.data), settings.schema);
         settings.data = flattenObject(settings.data);
 
-        for (var k in settings.schema) {
-            var c = settings.schema[k];
-            if (getTypeOf(c) === "array") {
-                // TODO
-                continue;
+
+        // Set fields in schema
+        function visit(obj, path) {
+            path = path || "";
+            for (var k in obj) {
+                var c = obj[k];
+                if ((c.type === "array" && typeof Object(c.schema).type !== "string") || c.type === "object") {
+                    visit(c.schema, path + k + ".");
+                }
+                c.label = c.label || k;
+                c.path = path + k;
             }
-            c.label = c.label || k;
-            c.path = k;
         }
+
+        visit(settings.schema);
 
         for (var k in settings.schema) {
             var c = settings.schema[k];
@@ -253,8 +257,8 @@
         "boolean": $("<span>"),
         "string": $("<span>"),
         "regexp": $("<span>"),
-        "array": $("<span>"),
-        "date": $("<span>")
+        "date": $("<span>"),
+        "array": $("<h3>")
     };
 
     JsonEdit.inputs = {
@@ -262,8 +266,8 @@
         "boolean": $("<input>", {type: "checkbox"}),
         "string": $("<input>", {type: "text"}),
         "regexp": $("<input>", {type: "text"}),
+        "date": $("<input>", {type: "date"}),
         "array": $("<input>", {type: "text"}),
-        "date": $("<input>", {type: "date"})
     };
 })($);
 
