@@ -6,13 +6,18 @@
         <script src="./js/jquery.js"></script>
         <script src="../src/jquery-json-editor.js"></script>
         <script src="./js/handlers.js"></script>
+        <link rel="stylesheet" href="./css/style.css" type="text/css" media="screen" charset="utf-8">
     </head>
     <body>
         <h1>Awesome Form</h1>
-        <div>
-            <label>
-                <span>Input Data:</span><br>
-                <textarea cols="60" rows="20" style="width:100%" id="inputData">
+
+        <div class="row">
+            <div class="left">
+                <div>
+                    <button id="updateForm">Update Form</button><br>
+                    <label>
+                        <span>Input Data</span><br>
+                        <textarea cols="60" rows="20" style="width:100%" id="inputData">
 a = {
     data: {
         age: 19,
@@ -64,14 +69,16 @@ a = {
         born: { label: "Born Date" }
     }
 }</textarea>
-            </label>
+                    </label>
+                </div>
+            </div>
+            <div class="right">
+                <button id="getData">Get Data</button>
+                <pre></pre>
+            </div>
         </div>
-
-        <button id="updateForm">Update Form</button>
         <hr>
 
         <div class="first-form"></div>
-        <button id="getData">Get Data</button>
-        <pre></pre>
     </body>
 </html>

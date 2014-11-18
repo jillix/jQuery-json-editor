@@ -1,0 +1,45 @@
+label > span {
+    margin-right: 5px;
+}
+
+label > span:empty {
+    margin-right: 0;
+}
+
+label > span:after {
+    content: ":";
+}
+
+label > span:empty:after {
+    content: "";
+}
+
+input {
+    padding: 4px;
+}
+
+.first-form div {
+    margin: 9px;
+}
+
+body {
+    padding: 30px;
+    font-family: sans-serif;
+}
+
+table > thead > th {
+    padding: 8px;
+}
+
+.row > .left {
+    width: 40%;
+    display: inline-block;
+    margin-right: 5px;
+    border-right: 1px solid black;
+    padding-right: 16px;
+}
+
+.row > .right {
+    width: 49%;
+    display: inline-block;
+}

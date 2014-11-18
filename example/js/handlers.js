@@ -7,5 +7,5 @@ $(function () {
     }).click();
     $("button#getData").on("click", function () {
         $("pre").html(JSON.stringify(firstForm.getData(), null, 4));
-    });
+    }).click();
 });
