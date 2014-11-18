@@ -162,16 +162,33 @@
                     ]);
 
                    var fieldData = self.getValue(field.path);
+                   var headers = [];
                    // headers
                    for (var k in field.schema) {
                        var c = field.schema[k];
+                       headers.push(c.name);
                        $headers.append(
-                            $("<th>", { text: c.label })
+                            $("<th>", { text: c.label || "Values" })
                        );
                    }
 
                    for (var i = 0; i < fieldData.length; ++i) {
                       var cFieldData = fieldData[i];
+                      var $tr = $("<tr>").appendTo($tbody);
+                      if (typeof field.schema.type === "string") {
+                         $tr.append($("<td>").append(self.createGroup({
+                             type: getTypeOf(cFieldData),
+                             path: field.path + "." + i
+                         })));
+                      } else {
+                          for (var ii = 0; ii < headers.length; ++ii) {
+                             var sch = field.schema[headers[ii]];
+                             $tr.append($("<td>").append(self.createGroup({
+                                 type: sch.type,
+                                 path: sch.path.replace(new RegExp("^.?" + field.name + "."), field.name + "." + i + ".")
+                             })));
+                          }
+                      }
                       // TODO
                    }
 
@@ -264,6 +281,7 @@
                 }
                 c.label = c.label || k;
                 c.path = path + k;
+                c.name = k;
             }
         }
 

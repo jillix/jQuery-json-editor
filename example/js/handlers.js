@@ -7,9 +7,18 @@ $(function () {
                 first: "Johnny",
                 last: "B."
             },
+            location: {
+                region: {
+                    name: "Bihor",
+                    country: {
+                        name: "Romania"
+                    }
+                },
+                shortname: "BH"
+            },
             student: true,
-            born: new Date(1995, 9, 14),
             hobbies: ["piano", "blogging"],
+            born: new Date(1995, 9, 14),
             keyboars: [
                 {
                     manufacturer: "Yamaha",
