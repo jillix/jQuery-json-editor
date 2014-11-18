@@ -22,11 +22,20 @@ $(function () {
             keyboars: [
                 {
                     manufacturer: "Yamaha",
-                    type: "PSR8000"
+                    type: "PSR8000",
+                    digital: true,
+                    manuals: ["Manual 1", "manual 2 Yamaha", "Ionica"],
+                    test: [{ name: "Test"  }]
                 },
                 {
                     manufacturer: "Yamaha",
-                    type: "P95"
+                    type: "P95",
+                    digital: false
+                },
+                {
+                    manufacturer: "KORG",
+                    type: "AD",
+                    digital: true
                 }
             ]
         },
