@@ -269,7 +269,7 @@
          * @param {Object} field The field object.
          * @return {jQuery} The jQuery object form.
          */
-        self.createGroup: function (field) {
+        self.createGroup = function (field) {
 
             // Create form group
             var $group = self.groups[field.type].clone(true);
