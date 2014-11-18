@@ -315,9 +315,15 @@
                   } else {
                       for (var ii = 0; ii < headers.length; ++ii) {
                          var sch = field.schema[headers[ii]];
+                         var path = null;
+                         if (new RegExp("^" + field.name + ".").test(sch.path)) {
+                            path = sch.path.replace(new RegExp("^" + field.name + "."), field.name + "." + i + ".");
+                         } else if (new RegExp("." + field.name + ".").test(sch.path)) {
+                            path = sch.path.replace(new RegExp("." + field.name + "."), "." + field.name + "." + i + ".");
+                         }
                          $tr.append($("<td>").append(self.createGroup({
                              type: sch.type,
-                             path: sch.path.replace(new RegExp("^.?" + field.name + "."), field.name + "." + i + "."),
+                             path: path,
                              schema: sch.schema,
                              name: sch.name
                          })));
