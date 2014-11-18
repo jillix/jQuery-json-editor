@@ -29,6 +29,7 @@ $(function () {
             age: { label: "Age" },
             country: { label: "Country" },
             name: {
+                label: " ",
                 schema: {
                     first: { label: "First Name" },
                     last: { label: "Last Name" }
@@ -38,6 +39,7 @@ $(function () {
             hobbies: { label: "Hobbies" },
             born: { label: "Born" },
             keyboars: {
+                label: "Keyboards",
                 schema: {
                     manufacturer: { label: "Manufacturer" },
                     type: { label: "Type" },
