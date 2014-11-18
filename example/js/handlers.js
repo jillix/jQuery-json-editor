@@ -7,15 +7,6 @@ $(function () {
                 first: "Johnny",
                 last: "B."
             },
-            location: {
-                region: {
-                    name: "Bihor",
-                    country: {
-                        name: "Romania"
-                    }
-                },
-                shortname: "BH"
-            },
             student: true,
             hobbies: ["piano", "blogging"],
             born: new Date(1995, 9, 14),
@@ -23,18 +14,13 @@ $(function () {
                 {
                     manufacturer: "Yamaha",
                     type: "PSR8000",
-                    digital: true,
-                    manuals: ["Manual 1", "manual 2 Yamaha", "Ionica"],
-                    test: [{ name: "Test"  }]
+                    pianoKeys: false,
+                    digital: true
                 },
                 {
                     manufacturer: "Yamaha",
                     type: "P95",
-                    digital: false
-                },
-                {
-                    manufacturer: "KORG",
-                    type: "AD",
+                    pianoKeys: true,
                     digital: true
                 }
             ]
@@ -46,20 +32,7 @@ $(function () {
         }
     });
 
-    /**
-     *  Schema:
-     *  {
-     *      age: { type: "number" },
-     *      name.country: { type: "string" }
-     *      ...
-     *      hobbies: { type: "array", schema: {
-     *          type: "string"
-     *      }},
-     *  }
-     *
-     * */
-
     $("button").on("click", function () {
-        console.log(firstForm.getData());
+        $("pre").html(JSON.stringify(firstForm.getData(), null, 4));
     });
 });
