@@ -1,6 +1,5 @@
 (function ($) {
 
-
     /**
      * findValue
      * Finds a value in parent (object) using the dot notation passed in dotNot.
@@ -203,7 +202,8 @@
                     }
                 } else {
                     $input = self.inputs[field.type].clone(true).attr({
-                        "data-json-editor-path": field.path
+                        "data-json-editor-path": field.path,
+                        "data-json-editor-type": field.type
                     });
 
                     // Set value in input
@@ -298,6 +298,7 @@
             var data = {};
             $("[data-json-editor-path]", settings.container).each(function () {
                 var $this = $(this);
+                var type = $(this).attr("data-json-editor-type");
                 var path = $this.attr("data-json-editor-path");
                 if ($this.attr("type") === "checkbox") {
                     data[path] = $this.prop("checked");
@@ -305,7 +306,7 @@
                     data[path] = $this.val();
                 }
 
-                var converter = self.converters[settings.schema[path].type];
+                var converter = self.converters[type];
                 if (typeof converter === "function") {
                     data[path] = converter(data[path]);
                 }
