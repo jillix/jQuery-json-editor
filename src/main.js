@@ -2,6 +2,32 @@
 
 
     /**
+     * findValue
+     * Finds a value in parent (object) using the dot notation passed in dotNot.
+     *
+     * @name findValue
+     * @function
+     * @param {Object} parent The object containing the searched value
+     * @param {String} dotNot Path to the value
+     * @return {Anything} Found value or undefined
+     */
+    function findValue(parent, dotNot) {
+
+        if (!dotNot || !dotNot) return undefined;
+
+        var splits = dotNot.split(".");
+        var value;
+
+        for (var i = 0; i < splits.length; ++i) {
+            value = parent[splits[i]];
+            if (value === undefined) return undefined;
+            if (typeof value === "object") parent = value;
+        }
+
+        return value;
+    }
+
+    /**
      * flattenObject
      * Converts an object to a flat one
      *
@@ -105,7 +131,8 @@
         var settings = $.extend({
             data: {},
             schema: {},
-            container: this
+            container: this,
+            autoInit: true
         }, opt_options);
 
         var self = {
@@ -114,28 +141,83 @@
             groups: $.extend(JsonEdit.groups, opt_options.groups),
             inputs: $.extend(JsonEdit.inputs, opt_options.inputs),
             converters: $.extend(JsonEdit.converters, opt_options.converters),
-            createGroup: function (obj) {
-                if (obj.type === "array") {
-                    // TODO Long story here
-                    return;
-                }
-                var $group = self.groups[obj.type].clone(true);
+            createGroup: function (field) {
+
+                // Create form group
+                var $group = self.groups[field.type].clone(true);
+
                 // TODO Configurable
-                $group.find("label").append(self.labels[obj.type].clone(true).text(obj.label));
-                var $input = self.inputs[obj.type].clone(true).attr({
-                    "data-json-editor-path": obj.path
-                }).appendTo($group.find("label"));
-                if (obj.type === "boolean") {
-                    $input.prop("checked", obj.value);
-                } else if (obj.type === "date") {
-                    $input[0].valueAsDate = obj.value;
+                // Add label
+                $group.find("label").append(self.labels[field.type].clone(true).text(field.label));
+
+                // Add input
+                var $input = null;
+                if (field.type == "array") {
+                    // TODO Configurable
+                    var $headers = null;
+                    var $tbody = null;
+                    $input = $("<table>").append([
+                        $headers = $("<thead>").append("<tr>"),
+                        $tbody = $("<tbody>")
+                    ]);
+
+                   var fieldData = self.getValue(field.path);
+                   // headers
+                   for (var k in field.schema) {
+                       var c = field.schema[k];
+                       $headers.append(
+                            $("<th>", { text: c.label })
+                       );
+                   }
+
+                   for (var i = 0; i < fieldData.length; ++i) {
+                      var cFieldData = fieldData[i];
+                      // TODO
+                   }
+
+                } else if (field.type === "object") {
+                    $input = [];
+                    for (var k in field.schema) {
+                        $input.push(self.createGroup(field.schema[k]));
+                    }
                 } else {
-                    $input.val(obj.value);
+                    $input = self.inputs[field.type].clone(true).attr({
+                        "data-json-editor-path": field.path
+                    });
+
+                    // Set value in input
+                    var value = self.getValue(field.path);
+                    if (field.type === "boolean") {
+                        $input.prop("checked", value);
+                    } else if (field.type === "date") {
+                        $input[0].valueAsDate = value;
+                    } else {
+                        $input.val(value);
+                    }
                 }
+
+                $group.find("label").append($input);
+
 
                 return $group;
             },
             elms: {}
+        };
+
+        self.getValue = function (fieldPath) {
+            return findValue(settings.data, fieldPath);
+        };
+
+        self.initUi = function () {
+
+            function create(obj) {
+                for (var k in obj) {
+                    var c = obj[k];
+                    settings.container.append(self.createGroup(c));
+                }
+            }
+
+            create(settings.schema);
         };
 
         function sch(obj, out, path) {
@@ -171,8 +253,6 @@
         }
 
         settings.schema = mergeRecursive(sch(settings.data), settings.schema);
-        settings.data = flattenObject(settings.data);
-
 
         // Set fields in schema
         function visit(obj, path) {
@@ -188,19 +268,8 @@
         }
 
         visit(settings.schema);
-
-        for (var k in settings.schema) {
-            var c = settings.schema[k];
-            if (getTypeOf(c) === "array") {
-                // TODO
-                continue;
-            }
-            settings.container.append(self.createGroup({
-                value: settings.data[c.path],
-                type: c.type,
-                label: c.label,
-                path: c.path
-            }));
+        if (settings.autoInit === true) {
+            self.initUi();
         }
 
         self.getData = function () {
@@ -249,6 +318,7 @@
         "string":   $("<div>").append($("<label>")),
         "regexp":   $("<div>").append($("<label>")),
         "array":    $("<div>").append($("<label>")),
+        "object":   $("<div>").append($("<label>")),
         "date":     $("<div>").append($("<label>"))
     };
 
@@ -258,6 +328,7 @@
         "string": $("<span>"),
         "regexp": $("<span>"),
         "date": $("<span>"),
+        "object": $("<h3>"),
         "array": $("<h3>")
     };
 
