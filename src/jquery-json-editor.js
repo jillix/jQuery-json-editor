@@ -308,9 +308,20 @@
                   var cFieldData = fieldData[i];
                   var $tr = $("<tr>").appendTo($tbody);
                   if (typeof Object(field.schema).type === "string") {
+                     var path = null;
+                     if (new RegExp("^" + field.name + ".").test(field.path)) {
+                        path = field.path.replace(new RegExp("^" + field.name + "."), field.name + "." + i + ".");
+                     } else if (new RegExp("." + field.name + ".").test(field.path)) {
+                        path = field.path.replace(new RegExp("." + field.name + "."), "." + field.name + "." + i + ".");
+                     } else if (new RegExp("." + field.name + "$").test(field.path)) {
+                        path = field.path.replace(new RegExp("." + field.name + "$"), "." + field.name + "." + i);
+                     } else {
+                        path = field.path + "." + i;
+                     }
                      $tr.append($("<td>").append(self.createGroup({
                          type: getTypeOf(cFieldData),
-                         path: field.path + "." + i,
+                         path: path,
+                         schema: field.schema
                      })));
                   } else {
                       for (var ii = 0; ii < headers.length; ++ii) {
@@ -320,7 +331,10 @@
                             path = sch.path.replace(new RegExp("^" + field.name + "."), field.name + "." + i + ".");
                          } else if (new RegExp("." + field.name + ".").test(sch.path)) {
                             path = sch.path.replace(new RegExp("." + field.name + "."), "." + field.name + "." + i + ".");
+                         } else if (new RegExp("." + field.name + "$").test(sch.path)) {
+                            path = sch.path.replace(new RegExp("." + field.name + "$"), "." + field.name + "." + i);
                          }
+                         console.log(path);
                          $tr.append($("<td>").append(self.createGroup({
                              type: sch.type,
                              path: path,
@@ -334,7 +348,14 @@
             } else if (field.type === "object") {
                 $input = [];
                 for (var k in field.schema) {
-                    $input.push(self.createGroup(field.schema[k]));
+                    var cField = field.schema[k];
+                    $input.push(self.createGroup({
+                        path: field.path + "." + k,
+                        type: cField.type,
+                        schema: cField.schema,
+                        name: cField.name,
+                        label: cField.label
+                    }));
                 }
             } else {
                 $input = self.inputs[field.type].clone(true).attr({
