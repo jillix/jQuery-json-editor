@@ -1,7 +1,7 @@
 # jQuery JSON Editor
 A jQuery library for editing JSON data.
 
-## Documentation
+# Documentation
 ## `$.fn.jsonEdit(opt_options)`
 Initializes the JSON editor on selected elements.
 
@@ -28,6 +28,25 @@ Creates a form group and returns the jQuery object.
 ### Return
 - **jQuery** The jQuery object form.
 
+## `addControls(path)`
+Adds delete button control.
+
+### Params
+- **String** `path`: The field path.
+
+## `add(path, data)`
+Adds new elements in arrays.
+
+### Params
+- **String|jQuery** `path`: The path to the field or the jQuery object.
+- **Object** `data`: Data to add.
+
+## `delete(path)`
+Deletes elements from arrays.
+
+### Params
+- **jQuery** `path`: The <tr> element to be deleted.
+
 ## `getValue(fieldPath)`
 Returns the value of field.
 
@@ -46,7 +65,8 @@ Collects data from form inputs and return the data object.
 ### Return
 - **Object** The object containing data taken from forms.
 
-## How to contribute
+
+# How to contribute
 
 1. File an issue in the repository, using the bug tracker, describing the
    contribution you'd like to make. This will help us to get you started on the
@@ -57,5 +77,5 @@ Collects data from form inputs and return the data object.
 4. Open a pull request, and reference the initial issue in the pull request
    message.
 
-## License
+# License
 See the [LICENSE](/LICENSE) file.
