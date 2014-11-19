@@ -100,6 +100,41 @@
         return result;
     }
 
+    /**
+     * handleArrays
+     * Converts object like `{ 0: ..., 1: ..., 2: ... }` into `[..., ..., ...]`.
+     *
+     * @name handleArrays
+     * @function
+     * @param {Object} obj Object containing objects with numbers as keys.
+     * @return {Object} The object with converted objects in arrays.
+     */
+    function handleArrays(obj) {
+        var convert = true;
+        var keys = Object.keys(obj).map(function (key) {
+            var val = parseInt(key, 10);
+            if (isNaN(val)) {
+                convert = false;
+            }
+            return val;
+        }).sort();
+
+        var arr = convert ? [] : obj;
+        if (!convert) {
+            for (var k in obj) {
+                if (obj[k] && obj[k].constructor === Object) {
+                    arr[k] = handleArrays(obj[k]);
+                }
+            }
+        } else {
+            keys.forEach(function (key) {
+                if (obj[key] && obj[key].constructor === Object) return (arr[key] = handleArrays(obj[key]));
+                arr.push(obj[key]);
+            });
+        }
+        return arr;
+    }
+
     /*!
      * mergeRecursive
      * Merges the two objects in the first object.
@@ -421,7 +456,7 @@
                     data[path] = converter(data[path]);
                 }
             });
-            return unflattenObject(data);
+            return handleArrays(unflattenObject(data));
         };
 
         // Merge schema object
@@ -454,6 +489,14 @@
         },
         date: function (value) {
             return new Date(value);
+        },
+        array: function (value) {
+            var arr = [];
+            var indexes = Object.keys(value).sort();
+            for (var i = 0; i < indexes.length; ++i) {
+                arr.push(value[indexes[i]]);
+            }
+            return arr;
         }
     };
 
