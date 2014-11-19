@@ -489,14 +489,6 @@
         },
         date: function (value) {
             return new Date(value);
-        },
-        array: function (value) {
-            var arr = [];
-            var indexes = Object.keys(value).sort();
-            for (var i = 0; i < indexes.length; ++i) {
-                arr.push(value[indexes[i]]);
-            }
-            return arr;
         }
     };
 
