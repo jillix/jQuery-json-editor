@@ -100,7 +100,7 @@
         return result;
     }
 
-    /**
+    /*!
      * handleArrays
      * Converts object like `{ 0: ..., 1: ..., 2: ... }` into `[..., ..., ...]`.
      *
@@ -313,22 +313,26 @@
             // Add label
             $group.find("label").append(self.labels[field.type].clone(true).text(field.label));
 
+           var fieldData = field.data === undefined ? self.getValue(field.path) : field.data;
+           if (fieldData === undefined) { return; }
+
             // Add input
             var $input = null;
             if (field.type == "array") {
                 // TODO Configurable
-                var $headers = null;
+                var $thead = null;
                 var $tbody = null;
+                var $headers = null;
                 $input = $("<table>", {
-                    "border": "1"
+                    "border": "1",
+                    "data-json-editor-path": field.path,
+                    "data-json-editor-type": "array"
                 }).append([
-                    $headers = $("<thead>").append("<tr>"),
+                    $thead = $("<thead>").append("<tr>"),
                     $tbody = $("<tbody>")
                 ]);
 
-               var fieldData = self.getValue(field.path);
-               if (!fieldData) { return; }
-
+                $headers = $thead.children("tr");
                var headers = [];
                // headers
                for (var k in field.schema) {
@@ -382,20 +386,87 @@
                 });
 
                 // Set value in input
-                var value = self.getValue(field.path);
                 if (field.type === "boolean") {
-                    $input.prop("checked", value);
+                    $input.prop("checked", fieldData);
                 } else if (field.type === "date") {
-                    $input[0].valueAsDate = value;
+                    $input[0].valueAsDate = fieldData;
                 } else {
-                    $input.val(value);
+                    $input.val(fieldData);
                 }
             }
 
             $group.find("label").append($input);
-
-
             return $group;
+        };
+
+        /**
+         * addControls
+         * Adds delete button control.
+         *
+         * @name addControls
+         * @function
+         * @param {String} path The field path.
+         * @return {undefined}
+         */
+        self.addControls = function (path) {
+            var $table = $("table[data-json-editor-path='" + path + "']", self.container);
+            if (!$table.length) { return; }
+            $table.children("thead").children("tr").append($("<th>"));
+            $table.children("tbody").children("tr").append($("<td>").append($("<button>", {
+                text: "Delete",
+                "data-json-editor-control": "delete"
+            })));
+            $table.on("click", "[data-json-editor-control='delete']", function () {
+                self.delete($(this).closest("tr"));
+            });
+        };
+
+        /**
+         * add
+         * Adds new elements in arrays.
+         *
+         * @name add
+         * @function
+         * @param {String|jQuery} path The path to the field or the jQuery object.
+         * @param {Object} data Data to add.
+         * @return {undefined}
+         */
+        self.add = function (path, data) {
+            var $elm = null;
+            if (path.constructor === jQuery) {
+                $elm = path;
+                $elm = $elm.closest("[data-json-editor-path]");
+                path = $elm.attr("data-json-editor-path");
+            } else {
+                $elm = $("[data-json-editor-path='" + path + "']", self.container);
+            }
+
+            var fieldSchema = findValue(settings.schema, path);
+            var $tbody = $elm.children("tbody");
+            if (typeof Object(fieldSchema.schema).type === "string") {
+                var $td = $("<td>").appendTo($("<tr>").appendTo($tbody));
+                $td.append(self.createGroup({
+                    path: fieldSchema.path + "." + $tbody.children("tr").length,
+                    type: fieldSchema.schema.type,
+                    schema: fieldSchema.schema,
+                    data: data
+                }));
+            } else {
+                throw new Error("Not yet implemented.");
+            }
+        };
+
+        /**
+         * delete
+         * Deletes elements from arrays.
+         *
+         * @name delete
+         * @function
+         * @param {jQuery} path The <tr> element to be deleted.
+         * @return {undefined}
+         */
+        self["delete"] = function (path) {
+            $(path).remove();
         };
 
         /**
@@ -444,6 +515,7 @@
             $("[data-json-editor-path]", self.container).each(function () {
                 var $this = $(this);
                 var type = $(this).attr("data-json-editor-type");
+                if (type === "array") { return; }
                 var path = $this.attr("data-json-editor-path");
                 if ($this.attr("type") === "checkbox") {
                     data[path] = $this.prop("checked");
