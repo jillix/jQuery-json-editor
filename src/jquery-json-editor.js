@@ -310,8 +310,17 @@
             var $group = self.groups[field.type].clone(true);
 
             // TODO Configurable
+            var $label = self.labels[field.type].clone(true).text(field.label);
+            if (findValue(field, "_edit.key")) {
+                $label = self.inputs.string.clone(true).val(field.label);
+                $label.attr({
+                    "data-json-object-key": "true",
+                    "data-json-key-path": field.path
+                });
+            }
+
             // Add label
-            $group.find("label").append(self.labels[field.type].clone(true).text(field.label));
+            $group.find("label").append($label);
 
            var fieldData = field.data === undefined ? self.getValue(field.path) : field.data;
            if (fieldData === undefined) { return; }
@@ -376,7 +385,8 @@
                         type: cField.type,
                         schema: cField.schema,
                         name: cField.name,
-                        label: cField.label
+                        label: cField.label,
+                         _edit: field.edit
                     }));
                 }
             } else {
@@ -527,6 +537,14 @@
                 if (typeof converter === "function") {
                     data[path] = converter(data[path]);
                 }
+            });
+
+            $("[data-json-object-key]", self.container).each(function () {
+                var $this = $(this);
+                var path = $(this).attr("data-json-key-path");
+                var value = data[path];
+                delete data[path];
+                data[$this.val()] = value;
             });
             return handleArrays(unflattenObject(data));
         };

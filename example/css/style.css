@@ -43,3 +43,8 @@ table > thead > th {
     width: 49%;
     display: inline-block;
 }
+
+input[type="text"][data-key-path] {
+    margin-right: 10px;
+}
+
