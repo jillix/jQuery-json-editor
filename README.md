@@ -1,6 +1,8 @@
-![jQuery JSON Editor](/resources/json-editor.png)
-
+jQuery JSON Editor
+==================
 A jQuery library for editing JSON data.
+
+![](/resources/json-editor.png)
 
 # Documentation
 ## `$.fn.jsonEdit(opt_options)`
