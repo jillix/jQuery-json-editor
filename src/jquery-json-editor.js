@@ -185,7 +185,7 @@
         } else {
             for (var k in obj) {
                 var c = obj[k];
-                t = getTypeOf(c)
+                t = getTypeOf(c);
 
                 if (t === "array" || t === "object") {
                     schema[path + k] = {
