@@ -322,8 +322,8 @@
             // Add label
             $group.find("label").append($label);
 
-           var fieldData = field.data === undefined ? self.getValue(field.path) : field.data;
-           if (fieldData === undefined) { return; }
+            var fieldData = field.data === undefined ? self.getValue(field.path) : field.data;
+            if (fieldData === undefined) { return; }
 
             // Add input
             var $input = null;
