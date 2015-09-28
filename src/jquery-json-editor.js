@@ -54,7 +54,7 @@
                 var flat = flattenObject (obj[key]);
                 for (var x in flat) {
                     if (!flat.hasOwnProperty(x)) {
-                         continue;
+                        continue;
                     }
 
                     result[key + '.' + x] = flat[x];
