@@ -342,39 +342,39 @@
                 ]);
 
                 $headers = $thead.children("tr");
-               var headers = [];
-               // headers
-               for (var k in field.schema) {
-                   var c = field.schema[k];
-                   headers.push(c.name);
-                   $headers.append(
-                        $("<th>", { text: c.label || "Values" })
-                   );
-               }
+                var headers = [];
+                // headers
+                for (var k in field.schema) {
+                    var c = field.schema[k];
+                    headers.push(c.name);
+                    $headers.append(
+                         $("<th>", { text: c.label || "Values" })
+                    );
+                }
 
-               for (var i = 0; i < fieldData.length; ++i) {
-                  var cFieldData = fieldData[i];
-                  var $tr = $("<tr>").appendTo($tbody);
-                  if (typeof Object(field.schema).type === "string") {
-                     var path = null;
-                     $tr.append($("<td>").append(self.createGroup({
-                         type: getTypeOf(cFieldData),
-                         path: field.path + "." + i,
-                         schema: field.schema
-                     })));
-                  } else {
-                      for (var ii = 0; ii < headers.length; ++ii) {
-                         var sch = field.schema[headers[ii]];
-                         var path = field.path + "." + i + "." + headers[ii];
-                         $tr.append($("<td>").append(self.createGroup({
-                             type: sch.type,
-                             path: path,
-                             schema: sch.schema,
-                             name: sch.name
-                         })));
-                      }
-                  }
-               }
+                for (var i = 0; i < fieldData.length; ++i) {
+                    var cFieldData = fieldData[i];
+                    var $tr = $("<tr>").appendTo($tbody);
+                    if (typeof Object(field.schema).type === "string") {
+                        var path = null;
+                        $tr.append($("<td>").append(self.createGroup({
+                            type: getTypeOf(cFieldData),
+                            path: field.path + "." + i,
+                            schema: field.schema
+                        })));
+                    } else {
+                        for (var ii = 0; ii < headers.length; ++ii) {
+                            var sch = field.schema[headers[ii]];
+                            var path = field.path + "." + i + "." + headers[ii];
+                            $tr.append($("<td>").append(self.createGroup({
+                                type: sch.type,
+                                path: path,
+                                schema: sch.schema,
+                                name: sch.name
+                            })));
+                        }
+                    }
+                }
 
             } else if (field.type === "object") {
                 $input = [];
@@ -386,7 +386,7 @@
                         schema: cField.schema,
                         name: cField.name,
                         label: cField.label,
-                         _edit: field.edit
+                        _edit: field.edit
                     }));
                 }
             } else {
