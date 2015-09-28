@@ -20,7 +20,7 @@
      */
     function findValue(parent, dotNot) {
 
-        if (!dotNot || !dotNot) return undefined;
+        if (!dotNot) return undefined;
 
         var splits = dotNot.split(".");
         var value;
