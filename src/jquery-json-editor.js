@@ -566,13 +566,13 @@
     // Default converter functions
     JsonEdit.converters = {
         boolean: function (value) {
-            return (value === true || value === "true" || value === "on" || typeof value == "number" && value > 0 || value === "1");
+            return (value === true || value === "true" || value === "on" || typeof value === "number" && value > 0 || value === "1");
         },
         string: function (value) {
             return value.toString();
         },
         number: function (value) {
-            return Number (value);
+            return Number(value);
         },
         regexp: function (value) {
             return new RegExp(value);
