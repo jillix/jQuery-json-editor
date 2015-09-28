@@ -42,7 +42,10 @@ a = {
                 pianoKeys: true,
                 digital: true
             }
-        ]
+        ],
+        editableObject: {
+            "you can edit this field": "and this value"
+        }
     },
     schema: {
         age: { label: "Age" },
@@ -66,7 +69,8 @@ a = {
                 digital: { label: "Digital" },
             }
         },
-        born: { label: "Born Date" }
+        born: { label: "Born Date" },
+        editableObject: { label: "Editable Object", edit: { key: true } }
     }
 }</textarea>
                     </label>
