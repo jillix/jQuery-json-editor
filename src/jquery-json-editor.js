@@ -27,7 +27,7 @@
 
         for (var i = 0; i < splits.length; ++i) {
             value = parent[splits[i]];
-            if (value === undefined) return undefined;
+            if (typeof value === "undefined") return undefined;
             if (typeof value === "object") parent = value;
         }
 
