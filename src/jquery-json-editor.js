@@ -328,12 +328,17 @@
             // Add input
             var $input = null;
             if (field.possible) {
+                // The input is a `<select>` with multiple possible answers
+                // stored in the `field.possible` array.
                 $input = $("<select>", {
                     attr: {
                         "data-json-editor-path": field.path,
                         "data-json-editor-type": field.type
                     }
                 });
+
+                // Convert the possible values to strings and add them to the
+                // `<select>`.
                 for (var i = 0; i < field.possible.length; i++) {
                     var t = field.possible[i].toString();
                     $input.append($("<option>", {
@@ -342,7 +347,7 @@
                     }));
                 }
 
-                // Set value in input
+                // Set the selected value to the one in `fieldData`.
                 $input.val(fieldData);
             } else if (field.type == "array") {
                 // TODO Configurable
