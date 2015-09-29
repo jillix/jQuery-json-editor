@@ -327,7 +327,24 @@
 
             // Add input
             var $input = null;
-            if (field.type == "array") {
+            if (field.possible) {
+                $input = $("<select>", {
+                    attr: {
+                        "data-json-editor-path": field.path,
+                        "data-json-editor-type": field.type
+                    }
+                });
+                for (var i = 0; i < field.possible.length; i++) {
+                    var t = field.possible[i].toString();
+                    $input.append($("<option>", {
+                        value: t,
+                        text: t
+                    }));
+                }
+
+                // Set value in input
+                $input.val(fieldData);
+            } else if (field.type == "array") {
                 // TODO Configurable
                 var $thead = null;
                 var $tbody = null;
