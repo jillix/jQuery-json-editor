@@ -262,7 +262,9 @@
      * @param {Object} opt_options An object containing the following fields:
      *
      *  - `data` (Object): The input JSON data (default: `{}`).
-     *  - `schema` (Object): The JSON data schema. The provided object will be merged with default schema.
+     *  - `schema` (Object): The JSON data schema. The provided object will be
+     *  merged with default schema, which is the one obtained by processing the
+     *  `data`.
      *  - `autoInit` (Boolean): If `true`, the forms will be added by default (default: `true`).
      *
      * @return {Object} The JSON editor object containing:
