@@ -46,7 +46,11 @@ a = {
         editableObject: {
             "you can edit this field": "and this value"
         },
-        preferredMusicGenre: "Classical"
+        preferredMusicGenre: "Classical",
+        editableObjectWithPossibleAnswers: {
+            "random number": 3,
+            "another field with editable name": "value"
+        }
     },
     schema: {
         age: { label: "Age" },
@@ -74,15 +78,26 @@ a = {
         editableObject: { label: "Editable Object", edit: { key: true } },
         preferredMusicGenre: {
             label: "Preferred music genre",
+            type: "string",
             possible: [
                 "Blues",
                 "Classical",
                 "Electronic",
                 "Folk",
                 "Hip hop",
-                "Pop"
-            ],
-            type: "string"
+                "Pop",
+                "Rock"
+            ]
+        },
+        editableObjectWithPossibleAnswers: {
+            label: "Editable object with possible answers",
+            edit: { key: true },
+            schema: {
+                "random number": {
+                    type: "number",
+                    possible: [1, 2, 3, 4, 5]
+                }
+            }
         }
     }
 }</textarea>
