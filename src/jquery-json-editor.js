@@ -368,13 +368,13 @@
                 $headers = $thead.children("tr");
                 var headers = [];
                 // headers
+                var $ths = [];
                 for (var k in field.schema) {
                     var c = field.schema[k];
                     headers.push(c.name);
-                    $headers.append(
-                         $("<th>", { text: c.label || "Values" })
-                    );
+                    $ths.push($("<th>", { text: c.label || "Values" }));
                 }
+                $headers.append($ths);
 
                 for (var i = 0; i < fieldData.length; ++i) {
                     var cFieldData = fieldData[i];
