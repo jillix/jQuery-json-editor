@@ -20,7 +20,7 @@
      */
     function findValue(parent, dotNot) {
 
-        if (!dotNot || !dotNot) return undefined;
+        if (!dotNot) return undefined;
 
         var splits = dotNot.split(".");
         var value;
@@ -54,7 +54,7 @@
                 var flat = flattenObject (obj[key]);
                 for (var x in flat) {
                     if (!flat.hasOwnProperty(x)) {
-                         continue;
+                        continue;
                     }
 
                     result[key + '.' + x] = flat[x];
@@ -185,7 +185,7 @@
         } else {
             for (var k in obj) {
                 var c = obj[k];
-                t = getTypeOf(c)
+                t = getTypeOf(c);
 
                 if (t === "array" || t === "object") {
                     schema[path + k] = {
@@ -262,7 +262,9 @@
      * @param {Object} opt_options An object containing the following fields:
      *
      *  - `data` (Object): The input JSON data (default: `{}`).
-     *  - `schema` (Object): The JSON data schema. The provided object will be merged with default schema.
+     *  - `schema` (Object): The JSON data schema. The provided object will be
+     *  merged with default schema, which is the one obtained by processing the
+     *  `data`.
      *  - `autoInit` (Boolean): If `true`, the forms will be added by default (default: `true`).
      *
      * @return {Object} The JSON editor object containing:
@@ -322,12 +324,34 @@
             // Add label
             $group.find("label").append($label);
 
-           var fieldData = field.data === undefined ? self.getValue(field.path) : field.data;
-           if (fieldData === undefined) { return; }
+            var fieldData = field.data === undefined ? self.getValue(field.path) : field.data;
+            if (fieldData === undefined) { return; }
 
             // Add input
             var $input = null;
-            if (field.type == "array") {
+            if (field.possible) {
+                // The input is a `<select>` with multiple possible answers
+                // stored in the `field.possible` array.
+                $input = $("<select>", {
+                    attr: {
+                        "data-json-editor-path": field.path,
+                        "data-json-editor-type": field.type
+                    }
+                });
+
+                // Convert the possible values to strings and add them to the
+                // `<select>`.
+                for (var i = 0; i < field.possible.length; i++) {
+                    var t = field.possible[i].toString();
+                    $input.append($("<option>", {
+                        value: t,
+                        text: t
+                    }));
+                }
+
+                // Set the selected value to the one in `fieldData`.
+                $input.val(fieldData);
+            } else if (field.type == "array") {
                 // TODO Configurable
                 var $thead = null;
                 var $tbody = null;
@@ -342,39 +366,39 @@
                 ]);
 
                 $headers = $thead.children("tr");
-               var headers = [];
-               // headers
-               for (var k in field.schema) {
-                   var c = field.schema[k];
-                   headers.push(c.name);
-                   $headers.append(
-                        $("<th>", { text: c.label || "Values" })
-                   );
-               }
+                var headers = [];
+                // headers
+                var $ths = [];
+                for (var k in field.schema) {
+                    var c = field.schema[k];
+                    headers.push(c.name);
+                    $ths.push($("<th>", { text: c.label || "Values" }));
+                }
+                $headers.append($ths);
 
-               for (var i = 0; i < fieldData.length; ++i) {
-                  var cFieldData = fieldData[i];
-                  var $tr = $("<tr>").appendTo($tbody);
-                  if (typeof Object(field.schema).type === "string") {
-                     var path = null;
-                     $tr.append($("<td>").append(self.createGroup({
-                         type: getTypeOf(cFieldData),
-                         path: field.path + "." + i,
-                         schema: field.schema
-                     })));
-                  } else {
-                      for (var ii = 0; ii < headers.length; ++ii) {
-                         var sch = field.schema[headers[ii]];
-                         var path = field.path + "." + i + "." + headers[ii];
-                         $tr.append($("<td>").append(self.createGroup({
-                             type: sch.type,
-                             path: path,
-                             schema: sch.schema,
-                             name: sch.name
-                         })));
-                      }
-                  }
-               }
+                for (var i = 0; i < fieldData.length; ++i) {
+                    var cFieldData = fieldData[i];
+                    var $tr = $("<tr>").appendTo($tbody);
+                    if (typeof Object(field.schema).type === "string") {
+                        var path = null;
+                        $tr.append($("<td>").append(self.createGroup({
+                            type: getTypeOf(cFieldData),
+                            path: field.path + "." + i,
+                            schema: field.schema
+                        })));
+                    } else {
+                        for (var ii = 0; ii < headers.length; ++ii) {
+                            var sch = field.schema[headers[ii]];
+                            var path = field.path + "." + i + "." + headers[ii];
+                            $tr.append($("<td>").append(self.createGroup({
+                                type: sch.type,
+                                path: path,
+                                schema: sch.schema,
+                                name: sch.name
+                            })));
+                        }
+                    }
+                }
 
             } else if (field.type === "object") {
                 $input = [];
@@ -384,9 +408,10 @@
                         path: field.path + "." + k,
                         type: cField.type,
                         schema: cField.schema,
+                        possible: cField.possible,
                         name: cField.name,
                         label: cField.label,
-                         _edit: field.edit
+                        _edit: field.edit
                     }));
                 }
             } else {
@@ -566,13 +591,13 @@
     // Default converter functions
     JsonEdit.converters = {
         boolean: function (value) {
-            return (value === true || value === "true" || value === "on" || typeof value == "number" && value > 0 || value === "1");
+            return (value === true || value === "true" || value === "on" || typeof value === "number" && value > 0 || value === "1");
         },
         string: function (value) {
             return value.toString();
         },
         number: function (value) {
-            return Number (value);
+            return Number(value);
         },
         regexp: function (value) {
             return new RegExp(value);

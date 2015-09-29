@@ -29,7 +29,7 @@ a = {
         student: true,
         hobbies: ["piano", "blogging"],
         born: new Date(1995, 9, 14),
-        keyboars: [
+        keyboards: [
             {
                 manufacturer: "Yamaha",
                 type: "PSR8000",
@@ -45,6 +45,11 @@ a = {
         ],
         editableObject: {
             "you can edit this field": "and this value"
+        },
+        preferredMusicGenre: "Classical",
+        editableObjectWithPossibleAnswers: {
+            "random number": 3,
+            "another field with editable name": "value"
         }
     },
     schema: {
@@ -60,7 +65,7 @@ a = {
         student: { label: "Student" },
         hobbies: { label: "Hobbies" },
         born: { label: "Born" },
-        keyboars: {
+        keyboards: {
             label: "Keyboards",
             schema: {
                 manufacturer: { label: "Manufacturer" },
@@ -70,7 +75,30 @@ a = {
             }
         },
         born: { label: "Born Date" },
-        editableObject: { label: "Editable Object", edit: { key: true } }
+        editableObject: { label: "Editable Object", edit: { key: true } },
+        preferredMusicGenre: {
+            label: "Preferred music genre",
+            type: "string",
+            possible: [
+                "Blues",
+                "Classical",
+                "Electronic",
+                "Folk",
+                "Hip hop",
+                "Pop",
+                "Rock"
+            ]
+        },
+        editableObjectWithPossibleAnswers: {
+            label: "Editable object with possible answers",
+            edit: { key: true },
+            schema: {
+                "random number": {
+                    type: "number",
+                    possible: [1, 2, 3, 4, 5]
+                }
+            }
+        }
     }
 }</textarea>
                     </label>
