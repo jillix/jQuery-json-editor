@@ -45,7 +45,8 @@ a = {
         ],
         editableObject: {
             "you can edit this field": "and this value"
-        }
+        },
+        preferredMusicGenre: "Classical"
     },
     schema: {
         age: { label: "Age" },
@@ -71,10 +72,11 @@ a = {
         },
         born: { label: "Born Date" },
         editableObject: { label: "Editable Object", edit: { key: true } },
-        musicGenre: {
-            label: "Music genre",
+        preferredMusicGenre: {
+            label: "Preferred music genre",
             possible: [
                 "Blues",
+                "Classical",
                 "Electronic",
                 "Folk",
                 "Hip hop",
