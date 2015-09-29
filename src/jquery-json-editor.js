@@ -406,6 +406,7 @@
                         path: field.path + "." + k,
                         type: cField.type,
                         schema: cField.schema,
+                        possible: cField.possible,
                         name: cField.name,
                         label: cField.label,
                         _edit: field.edit
