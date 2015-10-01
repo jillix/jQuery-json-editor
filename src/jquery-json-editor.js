@@ -253,6 +253,28 @@
         return types[o && o.constructor] || types[typeof o] || types[o] || (o ? "object" : "null");
     }
 
+    /*!
+     * getDefaultValueForType
+     * Returns a default value for the specified schema field type.
+     *
+     * @name getDefaultValueForType
+     * @function
+     * @param {String} type The input type string.
+     * @return {Anything} The default value for the specified type.
+     */
+    function getDefaultValueForType(type) {
+
+        return {
+            "number" : 0,
+            "boolean": false,
+            "string" : "",
+            "regexp" : new RegExp(""),
+            "date"   : new Date(),
+            "object" : {},
+            "array"  : []
+        }[type];
+    }
+
     /**
      * $.fn.jsonEdit
      * Initializes the JSON editor on selected elements.
@@ -325,11 +347,15 @@
             $group.find("label").append($label);
 
             var fieldData = field.data === undefined ? self.getValue(field.path) : field.data;
-            if (fieldData === undefined) { return; }
 
             // Add input
             var $input = null;
             if (field.possible) {
+                // If the field data is not specified, use a default value.
+                if (typeof fieldData === "undefined") {
+                    fieldData = getDefaultValueForType(field.type);
+                }
+
                 // The input is a `<select>` with multiple possible answers
                 // stored in the `field.possible` array.
                 $input = $("<select>", {
@@ -352,6 +378,11 @@
                 // Set the selected value to the one in `fieldData`.
                 $input.val(fieldData);
             } else if (field.type == "array") {
+                // If the field data is not specified, use a default value.
+                if (typeof fieldData === "undefined") {
+                    fieldData = [];
+                }
+
                 // TODO Configurable
                 var $thead = null;
                 var $tfoot = null;
@@ -388,11 +419,30 @@
                 $footers = $tfoot.children("tr");
                 var $tdfs = [];
                 if (typeof Object(field.schema).type === "string") {
-                    $tdfs.push($("<td>"));
+                    var $td = $("<td>");
+                    $tdfs.push($td.append(self.createGroup($.extend(true, field.schema, {
+                        type: field.schema.type,
+                        // special path for the new edited item:
+                        path: field.path + ".+"
+                    }))));
+                    $td.append($("<input>", {
+                        type: "button",
+                        value: "+"
+                    }));
                 } else {
-                    for (var k in field.schema) {
-                        $tdfs.push($("<td>"));
+                    for (var i = 0; i < headers.length; ++i) {
+                        var sch = field.schema[headers[i]];
+                        // special path for the new edited item:
+                        var path = field.path + ".+." + headers[i];
+                        delete sch.label;
+                        $tdfs.push($("<td>").append(self.createGroup($.extend(true, sch, {
+                            path: path
+                        }))));
                     }
+                    $tdfs.push($("<td>").append($("<input>", {
+                        type: "button",
+                        value: "+"
+                    })));
                 }
                 $footers.append($tdfs);
 
@@ -420,17 +470,17 @@
                 $input = [];
                 for (var k in field.schema) {
                     var cField = field.schema[k];
-                    $input.push(self.createGroup({
+                    $input.push(self.createGroup($.extend(true, cField, {
                         path: field.path + "." + k,
-                        type: cField.type,
-                        schema: cField.schema,
-                        possible: cField.possible,
-                        name: cField.name,
-                        label: cField.label,
                         _edit: field.edit
-                    }));
+                    })));
                 }
             } else {
+                // If the field data is not specified, use a default value.
+                if (typeof fieldData === "undefined") {
+                    fieldData = getDefaultValueForType(field.type);
+                }
+
                 $input = self.inputs[field.type].clone(true).attr({
                     "data-json-editor-path": field.path,
                     "data-json-editor-type": field.type
