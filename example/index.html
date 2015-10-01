@@ -34,13 +34,13 @@ a = {
                 manufacturer: "Yamaha",
                 type: "PSR8000",
                 pianoKeys: false,
-                digital: true
+                digital: "Yes"
             },
             {
                 manufacturer: "Yamaha",
                 type: "P95",
                 pianoKeys: true,
-                digital: true
+                digital: "Yes"
             }
         ],
         editableObject: {
@@ -52,7 +52,7 @@ a = {
             "another field with editable name": "value"
         }
     },
-    schema: {
+    schema: { // the types are inferred from the data above
         age: { label: "Age" },
         country: { label: "Country" },
         name: {
@@ -63,7 +63,17 @@ a = {
             }
         },
         student: { label: "Student" },
-        hobbies: { label: "Hobbies" },
+        hobbies: { label: "Hobbies",
+            schema: {
+                possible: [
+                    "piano",
+                    "blogging",
+                    "computers",
+                    "science",
+                    "music"
+                ]
+            }
+        },
         born: { label: "Born" },
         keyboards: {
             label: "Keyboards",
@@ -71,14 +81,13 @@ a = {
                 manufacturer: { label: "Manufacturer" },
                 type: { label: "Type" },
                 pianoKeys: { label: "Piano Keys" },
-                digital: { label: "Digital" },
+                digital: { label: "Digital", possible: ["Yes", "No"] },
             }
         },
         born: { label: "Born Date" },
         editableObject: { label: "Editable Object", edit: { key: true } },
         preferredMusicGenre: {
             label: "Preferred music genre",
-            type: "string",
             possible: [
                 "Blues",
                 "Classical",
@@ -94,7 +103,6 @@ a = {
             edit: { key: true },
             schema: {
                 "random number": {
-                    type: "number",
                     possible: [1, 2, 3, 4, 5]
                 }
             }
