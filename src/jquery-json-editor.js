@@ -354,14 +354,17 @@
             } else if (field.type == "array") {
                 // TODO Configurable
                 var $thead = null;
+                var $tfoot = null;
                 var $tbody = null;
                 var $headers = null;
+                var $footers = null;
                 $input = $("<table>", {
                     "border": "1",
                     "data-json-editor-path": field.path,
                     "data-json-editor-type": "array"
                 }).append([
                     $thead = $("<thead>").append("<tr>"),
+                    $tfoot = $("<tfoot>").append("<tr>"),
                     $tbody = $("<tbody>")
                 ]);
 
@@ -369,33 +372,47 @@
                 var headers = [];
                 // headers
                 var $ths = [];
-                for (var k in field.schema) {
-                    var c = field.schema[k];
-                    headers.push(c.name);
-                    $ths.push($("<th>", { text: c.label || "Values" }));
+                if (typeof Object(field.schema).type === "string") {
+                    headers.push(field.schema.name);
+                    $ths.push($("<th>", { text: field.schema.label || "Values" }));
+                } else {
+                    for (var k in field.schema) {
+                        var c = field.schema[k];
+                        headers.push(c.name);
+                        $ths.push($("<th>", { text: c.label || "Values" }));
+                    }
                 }
                 $headers.append($ths);
+
+                // footers (with add new item controls)
+                $footers = $tfoot.children("tr");
+                var $tdfs = [];
+                if (typeof Object(field.schema).type === "string") {
+                    $tdfs.push($("<td>"));
+                } else {
+                    for (var k in field.schema) {
+                        $tdfs.push($("<td>"));
+                    }
+                }
+                $footers.append($tdfs);
 
                 for (var i = 0; i < fieldData.length; ++i) {
                     var cFieldData = fieldData[i];
                     var $tr = $("<tr>").appendTo($tbody);
                     if (typeof Object(field.schema).type === "string") {
                         var path = null;
-                        $tr.append($("<td>").append(self.createGroup({
+                        $tr.append($("<td>").append(self.createGroup($.extend(true, field.schema, {
                             type: getTypeOf(cFieldData),
-                            path: field.path + "." + i,
-                            schema: field.schema
-                        })));
+                            path: field.path + "." + i
+                        }))));
                     } else {
                         for (var ii = 0; ii < headers.length; ++ii) {
                             var sch = field.schema[headers[ii]];
                             var path = field.path + "." + i + "." + headers[ii];
-                            $tr.append($("<td>").append(self.createGroup({
-                                type: sch.type,
-                                path: path,
-                                schema: sch.schema,
-                                name: sch.name
-                            })));
+                            delete sch.label;
+                            $tr.append($("<td>").append(self.createGroup($.extend(true, sch, {
+                                path: path
+                            }))));
                         }
                     }
                 }
