@@ -400,7 +400,6 @@
                     var cFieldData = fieldData[i];
                     var $tr = $("<tr>").appendTo($tbody);
                     if (typeof Object(field.schema).type === "string") {
-                        var path = null;
                         $tr.append($("<td>").append(self.createGroup($.extend(true, field.schema, {
                             type: getTypeOf(cFieldData),
                             path: field.path + "." + i
