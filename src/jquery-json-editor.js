@@ -442,7 +442,7 @@
                 if (typeof Object(field.schema).type === "string") {
                     var $td = $("<td>");
                     var sch = field.schema;
-                    $tdfs.push($td.append(self.createGroup($.extend(true, {}. field.schema, {
+                    $tdfs.push($td.append(self.createGroup($.extend(true, {}. sch, {
                         type: field.schema.type,
                         // special path for the new edited item:
                         path: field.path + ".+"
