@@ -9,6 +9,19 @@
 (function ($) {
 
     /*!
+     * ORDER_PROPERTY
+     * Contains the name of the property in the schemas which contains the
+     * order in which the fields from the schemas should be laid down in the
+     * user interface.
+     *
+     * @name ORDER_PROPERTY
+     * @constant
+     * @type {String}
+     * @default
+     */
+    var ORDER_PROPERTY = "order";
+
+    /*!
      * findValue
      * Finds a value in parent (object) using the dot notation passed in dotNot.
      *
@@ -217,6 +230,8 @@
     function schemaCoreFields(obj, path) {
         path = path || "";
         for (var k in obj) {
+            if (!obj.hasOwnProperty(k) || k === ORDER_PROPERTY) continue;
+
             var c = obj[k];
             if ((c.type === "array" && typeof Object(c.schema).type !== "string") || c.type === "object") {
                 schemaCoreFields(c.schema, path + k + ".");
@@ -224,6 +239,10 @@
             c.label = c.label || k;
             c.path = path + k;
             c.name = k;
+            if (c.type === "object" && !Array.isArray(Object(c.schema)[ORDER_PROPERTY])) {
+                c.schema = c.schema || {};
+                c.schema[ORDER_PROPERTY] = Object.keys(c.schema);
+            }
         }
     }
 
@@ -408,6 +427,8 @@
                     $ths.push($("<th>", { text: field.schema.label || "Values" }));
                 } else {
                     for (var k in field.schema) {
+                        if (!field.schema.hasOwnProperty(k) || k === ORDER_PROPERTY) continue;
+
                         var c = field.schema[k];
                         headers.push(c.name);
                         $ths.push($("<th>", { text: c.label || "Values" }));
@@ -420,7 +441,8 @@
                 var $tdfs = [];
                 if (typeof Object(field.schema).type === "string") {
                     var $td = $("<td>");
-                    $tdfs.push($td.append(self.createGroup($.extend(true, field.schema, {
+                    var sch = field.schema;
+                    $tdfs.push($td.append(self.createGroup($.extend(true, {}. field.schema, {
                         type: field.schema.type,
                         // special path for the new edited item:
                         path: field.path + ".+"
@@ -435,7 +457,7 @@
                         // special path for the new edited item:
                         var path = field.path + ".+." + headers[i];
                         delete sch.label;
-                        $tdfs.push($("<td>").append(self.createGroup($.extend(true, sch, {
+                        $tdfs.push($("<td>").append(self.createGroup($.extend(true, {}, sch, {
                             path: path
                         }))));
                     }
@@ -450,7 +472,7 @@
                     var cFieldData = fieldData[i];
                     var $tr = $("<tr>").appendTo($tbody);
                     if (typeof Object(field.schema).type === "string") {
-                        $tr.append($("<td>").append(self.createGroup($.extend(true, field.schema, {
+                        $tr.append($("<td>").append(self.createGroup($.extend(true, {}, field.schema, {
                             type: getTypeOf(cFieldData),
                             path: field.path + "." + i
                         }))));
@@ -459,7 +481,7 @@
                             var sch = field.schema[headers[ii]];
                             var path = field.path + "." + i + "." + headers[ii];
                             delete sch.label;
-                            $tr.append($("<td>").append(self.createGroup($.extend(true, sch, {
+                            $tr.append($("<td>").append(self.createGroup($.extend(true, {}, sch, {
                                 path: path
                             }))));
                         }
@@ -468,9 +490,11 @@
 
             } else if (field.type === "object") {
                 $input = [];
-                for (var k in field.schema) {
+                var order = field.schema[ORDER_PROPERTY];
+                for (var i = 0; i < order.length; i++) {
+                    var k = order[i];
                     var cField = field.schema[k];
-                    $input.push(self.createGroup($.extend(true, cField, {
+                    $input.push(self.createGroup($.extend(true, {}, cField, {
                         path: field.path + "." + k,
                         _edit: field.edit
                     })));
@@ -594,8 +618,9 @@
         self.initUi = function () {
 
             function create(obj) {
-                for (var k in obj) {
-                    var c = obj[k];
+                var order = obj[ORDER_PROPERTY];
+                for (var i = 0; i < order.length; i++) {
+                    var c = obj[order[i]];
                     self.container.append(self.createGroup(c));
                 }
             }

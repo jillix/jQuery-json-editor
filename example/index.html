@@ -20,7 +20,6 @@
                         <textarea cols="60" rows="20" style="width:100%" id="inputData">
 a = {
     data: {
-        age: 19,
         country: "Romania",
         name: {
             first: "Johnny",
@@ -32,13 +31,13 @@ a = {
         keyboards: [
             {
                 manufacturer: "Yamaha",
-                type: "PSR8000",
+                _type: "PSR8000",
                 pianoKeys: false,
                 digital: "Yes"
             },
             {
                 manufacturer: "Yamaha",
-                type: "P95",
+                _type: "P95",
                 pianoKeys: true,
                 digital: "Yes"
             }
@@ -53,11 +52,15 @@ a = {
         }
     },
     schema: { // the types are inferred from the data above
-        age: { label: "Age" },
+        order: ["age", "country", "name", "student", "hobbies", "born",
+            "keyboards", "editableObject", "preferredMusicGenre",
+            "editableObjectWithPossibleAnswers"],
+        age: { label: "Age", type: "number" },
         country: { label: "Country" },
         name: {
             label: " ",
             schema: {
+                order: ["first", "last"],
                 first: { label: "First Name" },
                 last: { label: "Last Name" }
             }
@@ -78,8 +81,9 @@ a = {
         keyboards: {
             label: "Keyboards",
             schema: {
+                order: ["manufacturer", "_type", "pianoKeys", "digital"],
                 manufacturer: { label: "Manufacturer" },
-                type: { label: "Type" },
+                _type: { label: "Type" },
                 pianoKeys: { label: "Piano Keys" },
                 digital: { label: "Digital", possible: ["Yes", "No"] },
             }
