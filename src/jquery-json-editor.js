@@ -664,6 +664,10 @@
                 var type = $(this).attr("data-json-editor-type");
                 if (type === "array") { return; }
                 var path = $this.attr("data-json-editor-path");
+
+                // If this is the path of a new item editor in a table, skip.
+                if (/(\.\+$|\.\+\.)/.test(path)) { return; }
+
                 if ($this.attr("type") === "checkbox") {
                     data[path] = $this.prop("checked");
                 } else {
