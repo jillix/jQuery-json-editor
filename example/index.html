@@ -52,7 +52,7 @@ a = {
         }
     },
     schema: { // the types are inferred from the data above
-        order: ["age", "country", "name", "student", "hobbies", "born",
+        _order: ["age", "country", "name", "student", "hobbies", "born",
             "keyboards", "editableObject", "preferredMusicGenre",
             "editableObjectWithPossibleAnswers"],
         age: { label: "Age", type: "number" },
@@ -60,7 +60,7 @@ a = {
         name: {
             label: " ",
             schema: {
-                order: ["first", "last"],
+                _order: ["first", "last"],
                 first: { label: "First Name" },
                 last: { label: "Last Name" }
             }
@@ -81,7 +81,7 @@ a = {
         keyboards: {
             label: "Keyboards",
             schema: {
-                order: ["manufacturer", "_type", "pianoKeys", "digital"],
+                _order: ["manufacturer", "_type", "pianoKeys", "digital"],
                 manufacturer: { label: "Manufacturer" },
                 _type: { label: "Type" },
                 pianoKeys: { label: "Piano Keys" },

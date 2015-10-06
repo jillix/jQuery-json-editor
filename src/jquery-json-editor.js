@@ -19,7 +19,7 @@
      * @type {String}
      * @default
      */
-    var ORDER_PROPERTY = "order";
+    var ORDER_PROPERTY = "_order";
 
     /*!
      * findValue
