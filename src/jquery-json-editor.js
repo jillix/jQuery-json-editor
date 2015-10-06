@@ -447,9 +447,9 @@
                     headers.push(field.schema.name);
                     $ths.push($("<th>", { text: field.schema.label || "Values" }));
                 } else {
-                    for (var k in field.schema) {
-                        if (!field.schema.hasOwnProperty(k) || k === ORDER_PROPERTY) continue;
-
+                    var order = field.schema[ORDER_PROPERTY];
+                    for (var i = 0; i < order.length; i++) {
+                        var k = order[i];
                         var c = field.schema[k];
                         headers.push(c.name);
                         $ths.push($("<th>", { text: c.label || "Values" }));
