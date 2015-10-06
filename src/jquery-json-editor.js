@@ -218,6 +218,22 @@
     }
 
     /*!
+     * schemaContainsMoreFields
+     * Determines if a schema contains other fields (defines an array of objects
+     * with one or more fields or an object with one or more fields).
+     *
+     * @name schemaContainsMoreFields
+     * @function
+     * @param {Object} schema The schema to analyze.
+     * @return {Boolean} True if the schema contains more fields, false otherwise.
+     */
+    function schemaContainsMoreFields(schema) {
+        return (schema.type === "array" &&
+                typeof Object(schema.schema).type !== "string") ||
+            schema.type === "object";
+    }
+
+    /*!
      * schemaCoreFields
      * Sets the core fields in schema.
      *
@@ -233,14 +249,19 @@
             if (!obj.hasOwnProperty(k) || k === ORDER_PROPERTY) continue;
 
             var c = obj[k];
-            if ((c.type === "array" && typeof Object(c.schema).type !== "string") || c.type === "object") {
+            if (schemaContainsMoreFields(c)) {
                 schemaCoreFields(c.schema, path + k + ".");
             }
             c.label = c.label || k;
             c.path = path + k;
             c.name = k;
-            if (c.type === "object" && !Array.isArray(Object(c.schema)[ORDER_PROPERTY])) {
+
+            // If the `c` schema contains more fields and it does not have the
+            // order of its fields specified,
+            if (schemaContainsMoreFields(c) &&
+                    !Array.isArray(Object(c.schema)[ORDER_PROPERTY])) {
                 c.schema = c.schema || {};
+                // Generate the default order of its fields using Object.keys.
                 c.schema[ORDER_PROPERTY] = Object.keys(c.schema);
             }
         }
