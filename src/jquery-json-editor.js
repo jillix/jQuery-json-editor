@@ -535,7 +535,10 @@
                 if (field.type === "boolean") {
                     $input.prop("checked", fieldData);
                 } else if (field.type === "date") {
-                    $input[0].valueAsDate = fieldData;
+                    // input[type=date] accepts a UTC date, not a local date.
+                    // See http://stackoverflow.com/a/32972449/258462
+                    $input[0].valueAsDate = new Date(Date.UTC(fieldData.getFullYear(),
+                                fieldData.getMonth(), fieldData.getDate()));
                 } else {
                     $input.val(fieldData);
                 }
