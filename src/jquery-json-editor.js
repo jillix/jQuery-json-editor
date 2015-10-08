@@ -460,18 +460,19 @@
                 // footers (with add new item controls)
                 $footers = $tfoot.children("tr");
                 var $tdfs = [];
+                var $addButton = $("<input>", {
+                    type: "button",
+                    value: "+"
+                });
                 if (typeof Object(field.schema).type === "string") {
                     var $td = $("<td>");
                     var sch = field.schema;
-                    $tdfs.push($td.append(self.createGroup($.extend(true, {}. sch, {
+                    $tdfs.push($td.append(self.createGroup($.extend(true, {}, sch, {
                         type: field.schema.type,
                         // special path for the new edited item:
                         path: field.path + ".+"
                     }))));
-                    $td.append($("<input>", {
-                        type: "button",
-                        value: "+"
-                    }));
+                    $td.append($addButton);
                 } else {
                     for (var i = 0; i < headers.length; ++i) {
                         var sch = field.schema[headers[i]];
@@ -482,31 +483,17 @@
                             path: path
                         }))));
                     }
-                    $tdfs.push($("<td>").append($("<input>", {
-                        type: "button",
-                        value: "+"
-                    })));
+                    $tdfs.push($("<td>").append($addButton));
                 }
                 $footers.append($tdfs);
 
+                $addButton.on("click", function () {
+                    // TODO
+                });
+
                 for (var i = 0; i < fieldData.length; ++i) {
                     var cFieldData = fieldData[i];
-                    var $tr = $("<tr>").appendTo($tbody);
-                    if (typeof Object(field.schema).type === "string") {
-                        $tr.append($("<td>").append(self.createGroup($.extend(true, {}, field.schema, {
-                            type: getTypeOf(cFieldData),
-                            path: field.path + "." + i
-                        }))));
-                    } else {
-                        for (var ii = 0; ii < headers.length; ++ii) {
-                            var sch = field.schema[headers[ii]];
-                            var path = field.path + "." + i + "." + headers[ii];
-                            delete sch.label;
-                            $tr.append($("<td>").append(self.createGroup($.extend(true, {}, sch, {
-                                path: path
-                            }))));
-                        }
-                    }
+                    self.add($input, cFieldData);
                 }
 
             } else if (field.type === "object") {
@@ -591,17 +578,31 @@
             }
 
             var fieldSchema = findValue(settings.schema, path);
-            var $tbody = $elm.children("tbody");
+            var $tbody = $elm.find("tbody");
+            var nextIndex = $tbody.children().length;
+            var $tr = $("<tr>").appendTo($tbody);
             if (typeof Object(fieldSchema.schema).type === "string") {
-                var $td = $("<td>").appendTo($("<tr>").appendTo($tbody));
-                $td.append(self.createGroup({
-                    path: fieldSchema.path + "." + $tbody.children("tr").length,
-                    type: fieldSchema.schema.type,
-                    schema: fieldSchema.schema,
+                $tr.append($("<td>").append(self.createGroup($.extend(true, {}, fieldSchema.schema, {
+                    type: getTypeOf(data),
+                    path: fieldSchema.path + "." + nextIndex,
                     data: data
-                }));
+                }))));
             } else {
-                throw new Error("Not yet implemented.");
+                var order = fieldSchema.schema[ORDER_PROPERTY];
+                var headers = [];
+                for (var i = 0; i < order.length; i++) {
+                    headers.push(fieldSchema.schema[order[i]].name);
+                }
+
+                for (var ii = 0; ii < headers.length; ++ii) {
+                    var sch = fieldSchema.schema[headers[ii]];
+                    var path = fieldSchema.path + "." + nextIndex + "." + headers[ii];
+                    delete sch.label; // TODO: maybe we should clone sch first
+                    $tr.append($("<td>").append(self.createGroup($.extend(true, {}, sch, {
+                        path: path,
+                        data: data[headers[ii]]
+                    }))));
+                }
             }
         };
 
