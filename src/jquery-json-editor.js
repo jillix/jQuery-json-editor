@@ -478,7 +478,15 @@
                         var sch = field.schema[headers[i]];
                         // special path for the new edited item:
                         var path = field.path + ".+." + headers[i];
-                        delete sch.label;
+
+                        // If the schema contains a label
+                        if (sch.label) {
+                            // we clone the schema and remove the label from the
+                            // clone so we do not affect other objects
+                            sch = $.extend(true, {}, sch);
+                            delete sch.label;
+                        }
+
                         $tdfs.push($("<td>").append(self.createGroup($.extend(true, {}, sch, {
                             path: path
                         }))));
@@ -597,7 +605,15 @@
                 for (var ii = 0; ii < headers.length; ++ii) {
                     var sch = fieldSchema.schema[headers[ii]];
                     var path = fieldSchema.path + "." + nextIndex + "." + headers[ii];
-                    delete sch.label; // TODO: maybe we should clone sch first
+
+                    // If the schema contains a label
+                    if (sch.label) {
+                        // we clone the schema and remove the label from the
+                        // clone so we do not affect other objects
+                        sch = $.extend(true, {}, sch);
+                        delete sch.label;
+                    }
+
                     $tr.append($("<td>").append(self.createGroup($.extend(true, {}, sch, {
                         path: path,
                         data: data[headers[ii]]
