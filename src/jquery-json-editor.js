@@ -27,10 +27,10 @@
      *
      * @name findValue
      * @function
-     * @param {Object} parent The object containing the searched value
+     * @param {Object} parent The object containing the searched value.
      * @param {String} dotNot Path to the value. If it is not given or it is an
      * empty string, the entire `parent` object will be returned.
-     * @return {Anything} Found value or undefined
+     * @return {Anything} Found value or undefined.
      */
     function findValue(parent, dotNot) {
 
@@ -50,12 +50,12 @@
 
     /*!
      * flattenObject
-     * Converts an object to a flat one
+     * Converts an object to a flat one.
      *
      * @name flattenObject
      * @function
-     * @param {Object} obj The object that should be converted
-     * @return {Object} Flatten object
+     * @param {Object} obj The object that should be converted.
+     * @return {Object} Flattened object.
      */
     function flattenObject(obj) {
 
@@ -82,12 +82,12 @@
 
     /*!
      * unflattenObject
-     * Converts a flat object to an unflatten one
+     * Converts a flat object to an unflatten one.
      *
      * @name unflattenObject
      * @function
-     * @param {Object} flat The flat object that should be converted
-     * @return {Object} Unflatten object
+     * @param {Object} flat The flat object that should be converted.
+     * @return {Object} Unflattened object.
      */
     function unflattenObject(flat) {
 
@@ -120,8 +120,10 @@
      *
      * @name handleArrays
      * @function
-     * @param {Object} obj Object containing objects with numbers as keys.
-     * @return {Object} The object with converted objects in arrays.
+     * @param {Object} obj Object with numbers as keys or containing objects
+     * with numbers as keys.
+     * @return {Object} The object with numbers as keys or containing objects
+     * with numbers as keys converted to an array or an object with arrays.
      */
     function handleArrays(obj) {
         var convert = true;
@@ -156,7 +158,7 @@
      * @name mergeRecursive
      * @function
      * @param {Object} obj1 The first object.
-     * @param {The second object.} obj2
+     * @param {Object} obj2 The second object.
      * @return {Object} The two objects merged in the first one.
      */
     function mergeRecursive (obj1, obj2) {
@@ -183,7 +185,7 @@
      * @function
      * @param {Object} obj The current field object.
      * @param {Object} out The field that should be edited (default: `{}`).
-     * @param {String} path The path to the field value.
+     * @param {String} path The path to the field value (default: `""`).
      * @return {Object} The schema object.
      */
     function sch(obj, out, path) {
@@ -329,14 +331,16 @@
      *  - `schema` (Object): The JSON data schema. The provided object will be
      *  merged with default schema, which is the one obtained by processing the
      *  `data`.
-     *  - `autoInit` (Boolean): If `true`, the forms will be added by default (default: `true`).
+     *  - `autoInit` (Boolean): If `true`, the forms will be added by default
+     *  (default: `true`).
      *
      * @return {Object} The JSON editor object containing:
      *
      *  - `labels` (Object): An object with UI elements used for labels.
      *  - `groups` (Object): An object with UI elements used for groups.
      *  - `inputs` (Object): An object with UI elements used for inputs.
-     *  - `container` (jQuery): A jQuery object being the container of the JSON editor.
+     *  - `container` (jQuery): A jQuery object being the container of the JSON
+     *  editor.
      *  - `createGroup` (Function): Creates a form group.
      */
     var JsonEdit = $.fn.jsonEdit = function (opt_options) {
@@ -589,42 +593,48 @@
                 $elm = $elm.closest("[data-json-editor-path]");
                 path = $elm.attr("data-json-editor-path");
             } else {
-                $elm = $("[data-json-editor-path='" + path + "']", self.container);
+                $elm = $("[data-json-editor-path='" + path + "']",
+                        self.container);
             }
 
             var fieldSchema = findValue(settings.schema, path);
             var $tbody = $elm.find("tbody");
+            // The index of the newly added row, used in the paths
             var nextIndex = $tbody.children().length;
             var $tr = $("<tr>").appendTo($tbody);
+            // If the type of the schema is explicitly specified
             if (typeof Object(fieldSchema.schema).type === "string") {
-                $tr.append($("<td>").append(self.createGroup($.extend(true, {}, fieldSchema.schema, {
+                // then this is an array table with a single column
+                var newSchema = $.extend(true, {}, fieldSchema.schema, {
                     type: getTypeOf(data),
                     path: fieldSchema.path + "." + nextIndex,
                     data: data
-                }))));
+                });
+                delete newSchema.label;
+                $tr.append($("<td>").append(self.createGroup(newSchema)));
             } else {
+                // An array with the names of all the fields directly in this
+                // schema
                 var order = fieldSchema.schema[ORDER_PROPERTY];
-                var headers = [];
+
+                var fields = []; // Field names
                 for (var i = 0; i < order.length; i++) {
-                    headers.push(fieldSchema.schema[order[i]].name);
+                    fields.push(fieldSchema.schema[order[i]].name);
                 }
 
-                for (var ii = 0; ii < headers.length; ++ii) {
-                    var sch = fieldSchema.schema[headers[ii]];
-                    var path = fieldSchema.path + "." + nextIndex + "." + headers[ii];
+                for (var i = 0; i < fields.length; ++i) {
+                    // The schema of the current field
+                    var sch = fieldSchema.schema[fields[i]];
+                    // The path of the current field
+                    var path = fieldSchema.path + "." + nextIndex + "." +
+                        fields[i];
 
-                    // If the schema contains a label
-                    if (sch.label) {
-                        // we clone the schema and remove the label from the
-                        // clone so we do not affect other objects
-                        sch = $.extend(true, {}, sch);
-                        delete sch.label;
-                    }
-
-                    $tr.append($("<td>").append(self.createGroup($.extend(true, {}, sch, {
+                    var newSchema = $.extend(true, {}, sch, {
                         path: path,
-                        data: data[headers[ii]]
-                    }))));
+                        data: data[fields[i]]
+                    });
+                    delete newSchema.label;
+                    $tr.append($("<td>").append(self.createGroup(newSchema)));
                 }
             }
         };
@@ -710,6 +720,7 @@
                 }
 
                 var val = findValue(data, p);
+                // If the value for path `p` is not given, set a default value.
                 if (typeof val === "undefined") {
                     val = getDefaultValueForType(type);
                 }
