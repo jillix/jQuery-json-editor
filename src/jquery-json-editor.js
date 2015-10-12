@@ -28,12 +28,13 @@
      * @name findValue
      * @function
      * @param {Object} parent The object containing the searched value
-     * @param {String} dotNot Path to the value
+     * @param {String} dotNot Path to the value. If it is not given or it is an
+     * empty string, the entire `parent` object will be returned.
      * @return {Anything} Found value or undefined
      */
     function findValue(parent, dotNot) {
 
-        if (!dotNot) return undefined;
+        if (!dotNot) return parent;
 
         var splits = dotNot.split(".");
         var value;
@@ -462,8 +463,18 @@
                 var $tdfs = [];
                 var $addButton = $("<input>", {
                     type: "button",
-                    value: "+"
+                    val: "+",
+                    on: {
+                        click: function () {
+                            self.add($input, self.getData(field.path + ".+",
+                                        $input, true));
+                            self.setData(field.path + ".+", {});
+                        }
+                    },
+                    "data-json-editor-control": "add"
                 });
+                // TODO: maybe we should use self.add here too after extending
+                // it a bit, in both branches of the `if` structure:
                 if (typeof Object(field.schema).type === "string") {
                     var $td = $("<td>");
                     var sch = field.schema;
@@ -495,13 +506,8 @@
                 }
                 $footers.append($tdfs);
 
-                $addButton.on("click", function () {
-                    // TODO
-                });
-
                 for (var i = 0; i < fieldData.length; ++i) {
-                    var cFieldData = fieldData[i];
-                    self.add($input, cFieldData);
+                    self.add($input, fieldData[i]);
                 }
 
             } else if (field.type === "object") {
@@ -670,43 +676,141 @@
         };
 
         /**
+         * setData
+         * Sets the specified data to the form input(s) at the specified path.
+         *
+         * @name setData
+         * @function
+         * @param {String} path The path of the form input(s) where to set the
+         * data.
+         * @param {Object} data The data object to set.
+         * @param {jQuery} root Optional, the root jQuery element to search for
+         * the given path. If not given, defaults to `self.container`.
+         * @return {undefined}
+         */
+        self.setData = function (path, data, root) {
+            root = root || self.container;
+
+            $("[data-json-editor-path]", root).each(function () {
+                var $this = $(this);
+
+                var type = $this.attr("data-json-editor-type");
+                if (type === "array") { return; }
+
+                var p = $this.attr("data-json-editor-path");
+                // If the current path does not start with the given path,
+                // return.
+                if (p.substring(0, path.length) !== path) { return; }
+                // Remove the given path from the path of the current element.
+                p = p.substring(path.length);
+                if (p.length > 0) { // If the given path is not a direct value
+                    // remove the . character at the beginning
+                    p = p.substring(1);
+                }
+
+                var val = findValue(data, p);
+                if (typeof val === "undefined") {
+                    val = getDefaultValueForType(type);
+                }
+                switch ($this.attr("type")) {
+                    case "checkbox":
+                        $this.prop("checked", val);
+                        break;
+                    case "date":
+                        $this.get(0).valueAsDate = new Date(Date.UTC(val.getFullYear(),
+                                    val.getMonth(), val.getDate()));
+                        break;
+                    default:
+                        $this.val(val);
+                        break;
+                }
+            });
+        };
+
+        /**
          * getData
          * Collects data from form inputs and return the data object.
          *
          * @name getData
          * @function
-         * @return {Object} The object containing data taken from forms.
+         * @param {String} path Optional path at which to collect the data. If
+         * not specified, the path will be the root path.
+         * @param {jQuery} root Optional root element in which to search for the
+         * specified path. If not specified, the root element will be
+         * `self.container`. This is useful if the root element has not been
+         * appended to `self.container` yet.
+         * @param {Boolean} includeNewItemEditors Optional, if true the paths
+         * ending in ".+" or containing ".+." will be included in the final data
+         * object.
+         * @return {Object} The object containing data taken from form inputs.
          */
-        self.getData = function () {
+        self.getData = function (path, root, includeNewItemEditors) {
+            path = path || "";
+            root = root || self.container;
+
+            var directValue = false;
             var data = {};
-            $("[data-json-editor-path]", self.container).each(function () {
+            $("[data-json-editor-path]", root).each(function () {
                 var $this = $(this);
-                var type = $(this).attr("data-json-editor-type");
+
+                var type = $this.attr("data-json-editor-type");
                 if (type === "array") { return; }
-                var path = $this.attr("data-json-editor-path");
 
-                // If this is the path of a new item editor in a table, skip.
-                if (/(\.\+$|\.\+\.)/.test(path)) { return; }
+                var p = $this.attr("data-json-editor-path");
+                // If the current path does not start with the given path (which
+                // is by default an empty string), return.
+                if (p.substring(0, path.length) !== path) { return; }
+                // Remove the given path from the path of the current data in
+                // the final data object.
+                p = p.substring(path.length);
+                if (p.length > 0) { // If the given path is not a direct value
+                    // remove the . character at the beginning
+                    p = p.substring(1);
+                }
 
+                // If includeNewItemEditors is not true and this is the path of
+                // a new item editor in a table, skip.
+                if (!includeNewItemEditors && /(\.\+$|\.\+\.)/.test(p)) { return; }
+
+                var val;
                 if ($this.attr("type") === "checkbox") {
-                    data[path] = $this.prop("checked");
+                    val = $this.prop("checked");
                 } else {
-                    data[path] = $this.val();
+                    // The empty string below is necessary because the jQuery
+                    // `val` function on fields with possible values (which
+                    // possibly have the type "string" or "number", present in
+                    // the UI as <select>s, will return `null` if the set value
+                    // is not in the list of possible values and the implicit
+                    // value is `undefined` which may not be one of the possible
+                    // values. The string converter function called below
+                    // sometimes expects a non-null value.
+                    val = $this.val() || "";
                 }
 
                 var converter = self.converters[type];
                 if (typeof converter === "function") {
-                    data[path] = converter(data[path]);
+                    val = converter(val);
+                }
+
+                if (p.length > 0) { // If the given path is not a direct value
+                    data[p] = val;
+                } else {
+                    directValue = true;
+                    data = val;
                 }
             });
 
-            $("[data-json-object-key]", self.container).each(function () {
+            $("[data-json-object-key]", root).each(function () {
                 var $this = $(this);
-                var path = $(this).attr("data-json-key-path");
+                var path = $this.attr("data-json-key-path");
                 var value = data[path];
                 delete data[path];
                 data[$this.val()] = value;
             });
+
+            if (directValue) {
+                return data;
+            }
             return handleArrays(unflattenObject(data));
         };
 
