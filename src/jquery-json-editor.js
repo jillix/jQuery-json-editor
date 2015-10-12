@@ -286,12 +286,13 @@
             "string"                             : "string",
             "[object Function]"                  : "function",
             "[object RegExp]"                    : "regexp",
-            "function Array() { [native code] }" : "array",
-            "function Date() { [native code] }"  : "date",
+            "[object Date]"                      : "date",
             "[object Error]"                     : "error"
         };
 
-        return types[o && o.constructor] || types[typeof o] || types[o] || (o ? "object" : "null");
+        if ($.isArray(o)) return "array";
+        return types[o && Object.prototype.toString.call(o)] ||
+            types[typeof o] || types[o] || (o ? "object" : "null");
     }
 
     /*!
