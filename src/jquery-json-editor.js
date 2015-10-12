@@ -775,7 +775,8 @@
                 // Remove the given path from the path of the current data in
                 // the final data object.
                 p = p.substring(path.length);
-                if (p.length > 0) { // If the given path is not a direct value
+                // If the given path is not a direct value
+                if (p.length > 0 && path.length > 0) {
                     // remove the . character at the beginning
                     p = p.substring(1);
                 }
