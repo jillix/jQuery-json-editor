@@ -555,24 +555,51 @@
         };
 
         /**
-         * addControls
-         * Adds delete button control.
+         * resetPathIndicesInTable
+         * If a table contains these paths: `hobbies.0`, `hobbies.2` without
+         * `hobbies.1`, after calling this function, the `hobbies.2` paths will
+         * be replaced with `hobbies.1` paths. This function is called afer
+         * deleting a row in a table, in a callback in the `add` function.
          *
-         * @name addControls
+         * @name resetPathIndicesInTable
          * @function
-         * @param {String} path The field path.
+         * @param {String|jQuery} path A jQuery object indicating the table, or
+         * a path to a table.
          * @return {undefined}
          */
-        self.addControls = function (path) {
-            var $table = $("table[data-json-editor-path='" + path + "']", self.container);
-            if (!$table.length) { return; }
-            $table.children("thead").children("tr").append($("<th>"));
-            $table.children("tbody").children("tr").append($("<td>").append($("<button>", {
-                text: "Delete",
-                "data-json-editor-control": "delete"
-            })));
-            $table.on("click", "[data-json-editor-control='delete']", function () {
-                self.delete($(this).closest("tr"));
+        self.resetPathIndicesInTable = function (path) {
+            var $table;
+            if (path.constructor === jQuery) {
+                $table = path;
+                path = $table.attr("data-json-editor-path");
+            } else {
+                $table = $("table[data-json-editor-path='" + path + "']", self.container);
+            }
+
+            // For each row in the table
+            $table.children("tbody").children("tr").each(function (i, tr) {
+                var $tr = $(tr);
+                // get the index in the paths under the current row
+                var currentIndex = $tr.find("[data-json-editor-path]:first")
+                    .attr("data-json-editor-path");
+                currentIndex = currentIndex.substring(path.length + 1);
+                currentIndex = currentIndex.replace(/\..*$/, "");
+                currentIndex = parseInt(currentIndex);
+                // if the index in the paths is different than the index of the
+                // row
+                if (i !== currentIndex) {
+                    // for each subelement with a path
+                    $tr.find("[data-json-editor-path]").each(function (ii, e) {
+                        var newPath = $(e).attr("data-json-editor-path");
+                        // replace in the path the old wrong index with the new
+                        // index
+                        newPath = newPath.replace(new RegExp("\\." +
+                                    currentIndex + "\\."), "." + i + ".");
+                        newPath = newPath.replace(new RegExp("\\." +
+                                    currentIndex + "$"), "." + i);
+                        $(e).attr("data-json-editor-path", newPath);
+                    });
+                }
             });
         };
 
@@ -602,6 +629,18 @@
             // The index of the newly added row, used in the paths
             var nextIndex = $tbody.children().length;
             var $tr = $("<tr>").appendTo($tbody);
+
+            var $deleteButton = $("<button>", {
+                text: "×",
+                "data-json-editor-control": "delete",
+                on: {
+                    click: function () {
+                        self.delete($(this).closest("tr"));
+                        self.resetPathIndicesInTable($elm);
+                    }
+                }
+            });
+
             // If the type of the schema is explicitly specified
             if (typeof Object(fieldSchema.schema).type === "string") {
                 // then this is an array table with a single column
@@ -611,7 +650,8 @@
                     data: data
                 });
                 delete newSchema.label;
-                $tr.append($("<td>").append(self.createGroup(newSchema)));
+                $tr.append($("<td>").append(self.createGroup(newSchema),
+                            $deleteButton));
             } else {
                 // An array with the names of all the fields directly in this
                 // schema
@@ -636,6 +676,7 @@
                     delete newSchema.label;
                     $tr.append($("<td>").append(self.createGroup(newSchema)));
                 }
+                $tr.append($("<td>").append($deleteButton));
             }
         };
 
