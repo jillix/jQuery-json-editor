@@ -539,6 +539,9 @@
                     })));
                 }
 
+                if (field.addField) {
+                    var $div = $("<div>");
+
                     var $nameInput = $("<input>", {
                         type: "text"
                     });
@@ -662,6 +665,12 @@
                                     type: type,
                                     path: path
                                 }));
+
+                                $nameInput.add($labelInput, $typeSelect,
+                                        $possibleValueInput).val(null);
+                                $possibleValuesSelect.empty();
+                                $checkboxPossibleValues.prop("checked", false)
+                                    .trigger("change");
                             }
                         }
                     });
