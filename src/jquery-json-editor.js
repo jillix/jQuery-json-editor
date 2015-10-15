@@ -298,6 +298,18 @@
     }
 
     /*!
+     * knownElementaryFieldTypes
+     * An array with the known field types without `array` and `object`.
+     *
+     * @name knownElementaryFieldTypes
+     * @constant
+     * @type {Array}
+     * @default
+     */
+    var knownElementaryFieldTypes = ["number", "boolean", "string", "regexp",
+        "date"];
+
+    /*!
      * getDefaultValueForType
      * Returns a default value for the specified schema field type.
      *
@@ -525,6 +537,148 @@
                         path: field.path + "." + k,
                         _edit: field.edit
                     })));
+                }
+
+                    var $nameInput = $("<input>", {
+                        type: "text"
+                    });
+
+                    var $typeSelect = $("<select>", {
+                        on: {
+                            change: function () {
+                                var val = $(this).val();
+                                var $clone = JsonEdit.inputs[val].clone();
+                                $possibleValueInput.replaceWith($clone);
+                                $possibleValueInput = $clone;
+                            }
+                        }
+                    });
+                    for (var i = 0; i < knownElementaryFieldTypes.length; i++) {
+                        $typeSelect.append($("<option>", {
+                            value: knownElementaryFieldTypes[i],
+                            text: knownElementaryFieldTypes[i]
+                        }));
+                    }
+
+                    var $labelInput = $("<input>", {
+                        type: "text"
+                    });
+
+                    var $possibleValuesDiv = $("<div>", {
+                        css: {
+                            display: "none"
+                        }
+                    });
+
+                    var $possibleValuesSelect = $("<select>", {
+                        multiple: "multiple"
+                    });
+
+                    var $checkboxPossibleValues = $("<input>", {
+                        type: "checkbox",
+                        on: {
+                            change: function (e) {
+                                $possibleValuesDiv.toggle(this.checked);
+                            }
+                        }
+                    });
+
+                    var $possibleValueInput = $("<input>", {
+                    });
+
+                    var $addPossibleValueButton = $("<input>", {
+                        type: "button",
+                        value: "+ Add possible value",
+                        on: {
+                            click: function () {
+                                var val = $possibleValueInput.val()
+                                $possibleValuesSelect.append($("<option>", {
+                                    value: val,
+                                    text: val
+                                }));
+                            }
+                        }
+                    });
+
+                    /*!
+                     * nameAlreadyExists
+                     * A function that determines whether the given name
+                     * already exists in a field under the path in which the
+                     * user tries to create a new field.
+                     *
+                     * @name nameAlreadyExists
+                     * @function
+                     * @param {String} name The name of the field to search for.
+                     * @return {Boolean} True if the name already exists, false
+                     * otherwise.
+                     */
+                    function nameAlreadyExists(name) {
+                        // Convert the array of jQuery elements to a jQuery
+                        // object with multiple elements.
+                        var $input2 = $($.map($input,
+                                    function (e) { return e.get(0); }));
+
+                        // Obtain the data at the path where the new field is
+                        // created.
+                        var data = self.getData(field.path, $input2);
+
+                        // Return true if the given name is already in the
+                        // data, otherwise return false.
+                        return Object.keys(data).indexOf(name) > -1;
+                    }
+
+                    var $addFieldButton = $("<input>", {
+                        type: "button",
+                        value: "+ Add field",
+                        on: {
+                            click: function () {
+                                $nameInput.val($nameInput.val()
+                                        .replace(/\./g, "").trim());
+                                $labelInput.val($labelInput.val().trim());
+
+                                var name = $nameInput.val();
+                                var label = $labelInput.val();
+                                var type = $typeSelect.val();
+
+                                // Validate.
+                                if (name === "+" || name.length === 0 ||
+                                        nameAlreadyExists(name)) {
+                                    alert("The name of the field should be a" +
+                                            " non-empty string without dots, " +
+                                            "different than \"+\" and not " +
+                                            "already existing under the " +
+                                            "path \"" + field.path + "\".");
+                                    return;
+                                }
+                                if (label.length === 0) {
+                                    alert("The label of the field should be " +
+                                            "a non-empty string.");
+                                }
+
+                                var path = field.path + "." + name;
+                                $div.before(self.createGroup({
+                                    name: name,
+                                    label: label,
+                                    type: type,
+                                    path: path
+                                }));
+                            }
+                        }
+                    });
+
+                    $div.append($("<hr>"),
+                            $("<strong>").text("Add field"),
+                            $("<br>"),
+                            $("<label>").text("Name: ").append($nameInput),
+                            $("<label>").text("Type: ").append($typeSelect),
+                            $("<label>").text("Label: ").append($labelInput),
+                            $("<br>"),
+                            $("<label>").text("Enable possible values: ")
+                                .append($checkboxPossibleValues),
+                            $possibleValuesDiv.append($possibleValuesSelect,
+                                $possibleValueInput, $addPossibleValueButton),
+                            $addFieldButton);
+                    $input.push($div);
                 }
             } else {
                 // If the field data is not specified, use a default value.
