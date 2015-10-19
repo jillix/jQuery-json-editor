@@ -707,7 +707,7 @@
                             $("<br>"),
                             $("<label>").text("Name: ").append($nameInput),
                             $("<label>").text("Type: ").append($typeSelect),
-                            $("<label>").text("Label (without comma): ").append($labelInput),
+                            $("<label>").text("Label (without final semicolon): ").append($labelInput),
                             $("<br>"),
                             $("<label>").text("Enable possible values: ")
                                 .append($checkboxPossibleValues),
