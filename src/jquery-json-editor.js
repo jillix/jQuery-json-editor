@@ -252,8 +252,17 @@
             if (!obj.hasOwnProperty(k) || k === ORDER_PROPERTY) continue;
 
             var c = obj[k];
-            if (schemaContainsMoreFields(c)) {
+            var _schemaContainsMoreFields = schemaContainsMoreFields(c);
+            // If the schema contains more fields
+            if (_schemaContainsMoreFields) {
+                // recursively process them
                 schemaCoreFields(c.schema, path + k + ".");
+
+            // If the type is not specified but a non-empty array of
+            // possible values is specified
+            } else if (!c.type && c.possible) {
+                // set the type obtained by analyzing the first possible value
+                c.type = getTypeOf(c.possible[0]);
             }
             c.label = c.label || k;
             c.path = path + k;
@@ -261,7 +270,7 @@
 
             // If the `c` schema contains more fields and it does not have the
             // order of its fields specified,
-            if (schemaContainsMoreFields(c) &&
+            if (_schemaContainsMoreFields &&
                     !Array.isArray(Object(c.schema)[ORDER_PROPERTY])) {
                 c.schema = c.schema || {};
                 // Generate the default order of its fields using Object.keys.
@@ -1116,7 +1125,7 @@
             return new RegExp(value);
         },
         date: function (value) {
-            return new Date(value);
+            return new Date(value + " UTC");
         }
     };
 

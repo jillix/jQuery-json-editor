@@ -54,7 +54,7 @@ a = {
     schema: { // the types are inferred from the data above
         _order: ["age", "country", "name", "student", "hobbies", "born",
             "keyboards", "editableObject", "preferredMusicGenre",
-            "editableObjectWithPossibleAnswers"],
+            "editableObjectWithPossibleAnswers", "dateFieldWithPossibleValues"],
         age: { label: "Age", type: "number" },
         country: { label: "Country" },
         name: {
@@ -110,6 +110,16 @@ a = {
                     possible: [1, 2, 3, 4, 5]
                 }
             }
+        },
+        dateFieldWithPossibleValues: {
+            label: "Choose a date",
+            possible: [
+                new Date(2015, 7, 3),
+                new Date(2014, 8, 9),
+                new Date(2013, 3, 8),
+                new Date(2012, 1, 10),
+                new Date(2011, 10, 11)
+            ]
         }
     }
 }</textarea>
