@@ -558,6 +558,8 @@
                                     .attr("data-json-editor-type", type);
                                 $possibleValueInput.replaceWith($clone);
                                 $possibleValueInput = $clone;
+                                self.setValueToElement($possibleValueInput,
+                                        getDefaultValueForType(type));
                                 $possibleValuesSelect.empty();
                             }
                         }
@@ -654,7 +656,6 @@
 
                                 var name = $nameInput.val();
                                 var label = $labelInput.val();
-                                var type = $typeSelect.val();
 
                                 // Validate.
                                 if (name === "+" || name.length === 0 ||
@@ -671,19 +672,31 @@
                                             "a non-empty string.");
                                 }
 
-                                var path = field.path + "." + name;
-                                $div.before(self.createGroup({
+                                var newSchema = {
                                     name: name,
                                     label: label,
-                                    type: type,
-                                    path: path
-                                }));
+                                    type: $typeSelect.val(),
+                                    path: field.path + "." + name
+                                };
+                                if ($checkboxPossibleValues.prop("checked")) {
+                                    var possibleValues = [];
+                                    var converter = self.converters[newSchema.type];
+                                    $possibleValuesSelect.children("option").each(
+                                        function (i, e) {
+                                            possibleValues.push(converter
+                                                                ($(e).val()));
+                                        });
+                                    newSchema.possible = possibleValues;
+                                }
+
+                                $div.before(self.createGroup(newSchema));
 
                                 $nameInput.add($labelInput, $typeSelect,
                                         $possibleValueInput).val(null);
                                 $possibleValuesSelect.empty();
                                 $checkboxPossibleValues.prop("checked", false)
                                     .trigger("change");
+                                $typeSelect.trigger("change");
                             }
                         }
                     });
@@ -694,7 +707,7 @@
                             $("<br>"),
                             $("<label>").text("Name: ").append($nameInput),
                             $("<label>").text("Type: ").append($typeSelect),
-                            $("<label>").text("Label: ").append($labelInput),
+                            $("<label>").text("Label (without comma): ").append($labelInput),
                             $("<br>"),
                             $("<label>").text("Enable possible values: ")
                                 .append($checkboxPossibleValues),
