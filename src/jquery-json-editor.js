@@ -549,8 +549,9 @@
                     var $typeSelect = $("<select>", {
                         on: {
                             change: function () {
-                                var val = $(this).val();
-                                var $clone = JsonEdit.inputs[val].clone();
+                                var type = $(this).val();
+                                var $clone = JsonEdit.inputs[type].clone()
+                                    .attr("data-json-editor-type", type);
                                 $possibleValueInput.replaceWith($clone);
                                 $possibleValueInput = $clone;
                             }
@@ -594,7 +595,8 @@
                         value: "+ Add possible value",
                         on: {
                             click: function () {
-                                var val = $possibleValueInput.val()
+                                var val = self.getValueFromElement(
+                                        $possibleValueInput);
                                 $possibleValuesSelect.append($("<option>", {
                                     value: val,
                                     text: val
@@ -675,6 +677,7 @@
                         }
                     });
 
+                    $typeSelect.trigger("change");
                     $div.append($("<hr>"),
                             $("<strong>").text("Add field"),
                             $("<br>"),
@@ -700,17 +703,7 @@
                     "data-json-editor-type": field.type
                 });
 
-                // Set value in input
-                if (field.type === "boolean") {
-                    $input.prop("checked", fieldData);
-                } else if (field.type === "date") {
-                    // input[type=date] accepts a UTC date, not a local date.
-                    // See http://stackoverflow.com/a/32972449/258462
-                    $input[0].valueAsDate = new Date(Date.UTC(fieldData.getFullYear(),
-                                fieldData.getMonth(), fieldData.getDate()));
-                } else {
-                    $input.val(fieldData);
-                }
+                self.setValueToElement($input, fieldData);
             }
 
             $group.find("label").append($input);
@@ -870,6 +863,74 @@
         };
 
         /**
+         * getValueFromElement
+         * Returns the value of the specified jQuery input element. This is
+         * different than the simple jQuery `val` method because it returns a
+         * boolean value for inputs of type `checkbox`, it converts the string
+         * value of a `date` input to a `Date` object and it does other
+         * conversions based on the default or user `converters`.
+         *
+         * @name getValueFromElement
+         * @function
+         * @param {jQuery} $el The jQuery input element from which to extract
+         * the value.
+         * @return {Object} The value of the specified jQuery element.
+         */
+        self.getValueFromElement = function ($el) {
+            var type = $el.attr("data-json-editor-type");
+
+            var val;
+            if ($el.attr("type") === "checkbox") {
+                val = $el.prop("checked");
+            } else {
+                // The empty string below is necessary because the jQuery
+                // `val` function on fields with possible values (which
+                // possibly have the type "string" or "number", present in
+                // the UI as <select>s, will return `null` if the set value
+                // is not in the list of possible values and the implicit
+                // value is `undefined` which may not be one of the possible
+                // values. The string converter function called below
+                // sometimes expects a non-null value.
+                val = $el.val() || "";
+            }
+
+            var converter = self.converters[type];
+            if (typeof converter === "function") {
+                val = converter(val);
+            }
+
+            return val;
+        }
+
+        /**
+         * setValueToElement
+         * Sets a value to the specified jQuery input element. This is
+         * different than the simple jQuery `val` method because it understands
+         * boolean and `Date` values.
+         *
+         * @name setValueToElement
+         * @function
+         * @param {jQuery} $input The jQuery input element.
+         * @param {Object} val The value to set to the specified input element.
+         * @returns {undefined}
+         */
+        self.setValueToElement = function ($input, val) {
+            var type = $input.attr("data-json-editor-type");
+
+            // Set value in input
+            if (type === "boolean") {
+                $input.prop("checked", val);
+            } else if (type === "date") {
+                // input[type=date] accepts a UTC date, not a local date.
+                // See http://stackoverflow.com/a/32972449/258462
+                $input[0].valueAsDate = new Date(Date.UTC(val.getFullYear(),
+                            val.getMonth(), val.getDate()));
+            } else {
+                $input.val(val);
+            }
+        };
+
+        /**
          * initUi
          * Creates the form from JSON data.
          *
@@ -928,18 +989,7 @@
                 if (typeof val === "undefined") {
                     val = getDefaultValueForType(type);
                 }
-                switch ($this.attr("type")) {
-                    case "checkbox":
-                        $this.prop("checked", val);
-                        break;
-                    case "date":
-                        $this.get(0).valueAsDate = new Date(Date.UTC(val.getFullYear(),
-                                    val.getMonth(), val.getDate()));
-                        break;
-                    default:
-                        $this.val(val);
-                        break;
-                }
+                self.setValueToElement($this, val);
             });
         };
 
@@ -989,26 +1039,7 @@
                 // a new item editor in a table, skip.
                 if (!includeNewItemEditors && /(\.\+$|\.\+\.)/.test(p)) { return; }
 
-                var val;
-                if ($this.attr("type") === "checkbox") {
-                    val = $this.prop("checked");
-                } else {
-                    // The empty string below is necessary because the jQuery
-                    // `val` function on fields with possible values (which
-                    // possibly have the type "string" or "number", present in
-                    // the UI as <select>s, will return `null` if the set value
-                    // is not in the list of possible values and the implicit
-                    // value is `undefined` which may not be one of the possible
-                    // values. The string converter function called below
-                    // sometimes expects a non-null value.
-                    val = $this.val() || "";
-                }
-
-                var converter = self.converters[type];
-                if (typeof converter === "function") {
-                    val = converter(val);
-                }
-
+                var val = self.getValueFromElement($this);
                 if (p.length > 0) { // If the given path is not a direct value
                     data[p] = val;
                 } else {
