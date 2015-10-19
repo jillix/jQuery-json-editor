@@ -546,6 +546,10 @@
                         type: "text"
                     });
 
+                    var $possibleValuesSelect = $("<select>", {
+                        multiple: "multiple"
+                    });
+
                     var $typeSelect = $("<select>", {
                         on: {
                             change: function () {
@@ -554,6 +558,7 @@
                                     .attr("data-json-editor-type", type);
                                 $possibleValueInput.replaceWith($clone);
                                 $possibleValueInput = $clone;
+                                $possibleValuesSelect.empty();
                             }
                         }
                     });
@@ -572,10 +577,6 @@
                         css: {
                             display: "none"
                         }
-                    });
-
-                    var $possibleValuesSelect = $("<select>", {
-                        multiple: "multiple"
                     });
 
                     var $checkboxPossibleValues = $("<input>", {
