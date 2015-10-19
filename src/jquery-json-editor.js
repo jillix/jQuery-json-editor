@@ -606,6 +606,16 @@
                         }
                     });
 
+                    var $deletePossibleValueButton = $("<input>", {
+                        type: "button",
+                        value: "× Delete selected possible values",
+                        on: {
+                            click: function () {
+                                $possibleValuesSelect.children("option:selected").remove();
+                            }
+                        }
+                    });
+
                     /*!
                      * nameAlreadyExists
                      * A function that determines whether the given name
@@ -689,7 +699,8 @@
                             $("<label>").text("Enable possible values: ")
                                 .append($checkboxPossibleValues),
                             $possibleValuesDiv.append($possibleValuesSelect,
-                                $possibleValueInput, $addPossibleValueButton),
+                                $possibleValueInput, $addPossibleValueButton,
+                                $deletePossibleValueButton),
                             $addFieldButton);
                     $input.push($div);
                 }
