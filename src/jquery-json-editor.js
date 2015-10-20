@@ -815,7 +815,7 @@
             });
 
             $typeSelect.trigger("change");
-            $div.append($("<hr>"),
+            $div.append($("<label>").append($("<hr>"),
                     $("<strong>").text("Add field"),
                     $("<br>"),
                     $("<label>").text("Name: ").append($nameInput),
@@ -828,7 +828,7 @@
                     $possibleValuesDiv.append($possibleValuesSelect,
                         $possibleValueInput, $addPossibleValueButton,
                         $deletePossibleValueButton),
-                    $addFieldButton);
+                    $addFieldButton));
             return $div;
         };
 
