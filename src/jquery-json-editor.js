@@ -544,7 +544,8 @@
                     var cField = field.schema[k];
                     $input.push(self.createGroup($.extend(true, {}, cField, {
                         path: field.path + "." + k,
-                        _edit: field.edit
+                        _edit: field.edit,
+                        deletable: field.deletableFields
                     })));
                 }
 
@@ -681,7 +682,8 @@
                                     name: name,
                                     label: label,
                                     type: $typeSelect.val(),
-                                    path: field.path + "." + name
+                                    path: field.path + "." + name,
+                                    deletable: field.deletableFields
                                 };
                                 if ($checkboxPossibleValues.prop("checked")) {
                                     var possibleValues = [];
@@ -736,7 +738,27 @@
                 self.setValueToElement($input, fieldData);
             }
 
-            $group.find("label").append($input);
+            // Append the created input to the group element, the one returned
+            // by the function.
+            var $label = $group.find("label");
+            $label.append($input);
+            // If the field is marked as deletable, add a delete button after
+            // its input element.
+            if (field.deletable) {
+                $label.append($("<input>", {
+                    type: "button",
+                    value: "× Delete field",
+                    on: {
+                        click: function () {
+                            // When the Delete field button is clicked, remove
+                            // the group element from the document (the group
+                            // element contains the input element and the Delete
+                            // field button).
+                            $group.remove();
+                        }
+                    }
+                }));
+            }
             return $group;
         };
 

@@ -60,6 +60,7 @@ a = {
         name: {
             label: " ",
             addField: true,
+            deletableFields: true,
             schema: {
                 _order: ["first", "last"],
                 first: { label: "First Name" },
@@ -107,6 +108,7 @@ a = {
             edit: { key: true },
             schema: {
                 "random number": {
+                    deletable: true,
                     possible: [1, 2, 3, 4, 5]
                 }
             }
