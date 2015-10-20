@@ -664,7 +664,7 @@
                                 $labelInput.val($labelInput.val().trim());
 
                                 var name = $nameInput.val();
-                                var label = $labelInput.val();
+                                var label = $labelInput.val() || name;
 
                                 // Validate.
                                 if (name === "+" || name.length === 0 ||
@@ -675,10 +675,6 @@
                                             "already existing under the " +
                                             "path \"" + field.path + "\".");
                                     return;
-                                }
-                                if (label.length === 0) {
-                                    alert("The label of the field should be " +
-                                            "a non-empty string.");
                                 }
 
                                 var newSchema = {
@@ -716,7 +712,7 @@
                             $("<br>"),
                             $("<label>").text("Name: ").append($nameInput),
                             $("<label>").text("Type: ").append($typeSelect),
-                            $("<label>").text("Label (without final semicolon): ").append($labelInput),
+                            $("<label>").text("Label (optional, without final semicolon): ").append($labelInput),
                             $("<br>"),
                             $("<label>").text("Enable possible values: ")
                                 .append($checkboxPossibleValues),
