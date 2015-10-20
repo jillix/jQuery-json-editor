@@ -550,179 +550,8 @@
                 }
 
                 if (field.addField) {
-                    var $div = $("<div>");
-
-                    var $nameInput = $("<input>", {
-                        type: "text"
-                    });
-
-                    var $possibleValuesSelect = $("<select>", {
-                        multiple: "multiple"
-                    });
-
-                    var $typeSelect = $("<select>", {
-                        on: {
-                            change: function () {
-                                var type = $(this).val();
-                                var $clone = JsonEdit.inputs[type].clone()
-                                    .attr("data-json-editor-type", type);
-                                $possibleValueInput.replaceWith($clone);
-                                $possibleValueInput = $clone;
-                                self.setValueToElement($possibleValueInput,
-                                        getDefaultValueForType(type));
-                                $possibleValuesSelect.empty();
-                            }
-                        }
-                    });
-                    for (var i = 0; i < knownElementaryFieldTypes.length; i++) {
-                        $typeSelect.append($("<option>", {
-                            value: knownElementaryFieldTypes[i],
-                            text: knownElementaryFieldTypes[i]
-                        }));
-                    }
-
-                    var $labelInput = $("<input>", {
-                        type: "text"
-                    });
-
-                    var $possibleValuesDiv = $("<div>", {
-                        css: {
-                            display: "none"
-                        }
-                    });
-
-                    var $checkboxPossibleValues = $("<input>", {
-                        type: "checkbox",
-                        on: {
-                            change: function (e) {
-                                $possibleValuesDiv.toggle(this.checked);
-                            }
-                        }
-                    });
-
-                    var $possibleValueInput = $("<input>", {
-                    });
-
-                    var $addPossibleValueButton = $("<input>", {
-                        type: "button",
-                        value: "+ Add possible value",
-                        on: {
-                            click: function () {
-                                var val = self.getValueFromElement(
-                                        $possibleValueInput);
-                                $possibleValuesSelect.append($("<option>", {
-                                    value: val,
-                                    text: val
-                                }));
-                            }
-                        }
-                    });
-
-                    var $deletePossibleValueButton = $("<input>", {
-                        type: "button",
-                        value: "× Delete selected possible values",
-                        on: {
-                            click: function () {
-                                $possibleValuesSelect.children("option:selected").remove();
-                            }
-                        }
-                    });
-
-                    /*!
-                     * nameAlreadyExists
-                     * A function that determines whether the given name
-                     * already exists in a field under the path in which the
-                     * user tries to create a new field.
-                     *
-                     * @name nameAlreadyExists
-                     * @function
-                     * @param {String} name The name of the field to search for.
-                     * @return {Boolean} True if the name already exists, false
-                     * otherwise.
-                     */
-                    function nameAlreadyExists(name) {
-                        // Convert the array of jQuery elements to a jQuery
-                        // object with multiple elements.
-                        var $input2 = $($.map($input,
-                                    function (e) { return e.get(0); }));
-
-                        // Obtain the data at the path where the new field is
-                        // created.
-                        var data = self.getData(field.path, $input2);
-
-                        // Return true if the given name is already in the
-                        // data, otherwise return false.
-                        return Object.keys(data).indexOf(name) > -1;
-                    }
-
-                    var $addFieldButton = $("<input>", {
-                        type: "button",
-                        value: "+ Add field",
-                        on: {
-                            click: function () {
-                                $nameInput.val($nameInput.val()
-                                        .replace(/\./g, "").trim());
-                                $labelInput.val($labelInput.val().trim());
-
-                                var name = $nameInput.val();
-                                var label = $labelInput.val() || name;
-
-                                // Validate.
-                                if (name === "+" || name.length === 0 ||
-                                        nameAlreadyExists(name)) {
-                                    alert("The name of the field should be a" +
-                                            " non-empty string without dots, " +
-                                            "different than \"+\" and not " +
-                                            "already existing under the " +
-                                            "path \"" + field.path + "\".");
-                                    return;
-                                }
-
-                                var newSchema = {
-                                    name: name,
-                                    label: label,
-                                    type: $typeSelect.val(),
-                                    path: field.path + "." + name,
-                                    deletable: field.deletableFields
-                                };
-                                if ($checkboxPossibleValues.prop("checked")) {
-                                    var possibleValues = [];
-                                    var converter = self.converters[newSchema.type];
-                                    $possibleValuesSelect.children("option").each(
-                                        function (i, e) {
-                                            possibleValues.push(converter
-                                                                ($(e).val()));
-                                        });
-                                    newSchema.possible = possibleValues;
-                                }
-
-                                $div.before(self.createGroup(newSchema));
-
-                                $nameInput.add($labelInput, $typeSelect,
-                                        $possibleValueInput).val(null);
-                                $possibleValuesSelect.empty();
-                                $checkboxPossibleValues.prop("checked", false)
-                                    .trigger("change");
-                                $typeSelect.trigger("change");
-                            }
-                        }
-                    });
-
-                    $typeSelect.trigger("change");
-                    $div.append($("<hr>"),
-                            $("<strong>").text("Add field"),
-                            $("<br>"),
-                            $("<label>").text("Name: ").append($nameInput),
-                            $("<label>").text("Type: ").append($typeSelect),
-                            $("<label>").text("Label (optional, without final semicolon): ").append($labelInput),
-                            $("<br>"),
-                            $("<label>").text("Enable possible values: ")
-                                .append($checkboxPossibleValues),
-                            $possibleValuesDiv.append($possibleValuesSelect,
-                                $possibleValueInput, $addPossibleValueButton,
-                                $deletePossibleValueButton),
-                            $addFieldButton);
-                    $input.push($div);
+                    $input.push(self.createNewFieldEditor(field.path,
+                                field.deletableFields, $input));
                 }
             } else {
                 // If the field data is not specified, use a default value.
@@ -809,6 +638,196 @@
                     });
                 }
             });
+        };
+
+        /*!
+         * createNewFieldEditor
+         * Returns a jQuery object containing a new field editor.
+         *
+         * @name createNewFieldEditor
+         * @function
+         * @param {String} path The path to the object in which the new field
+         * editor will be inserted.
+         * @param {Boolean} deletableFields Whether the fields created by this
+         * field editor will be deletable.
+         * @param {Array} $inputs An array of jQuery elements representing the
+         * group elements containing input elements at the same level as the
+         * new field editor destination in the UI.
+         * @return {jQuery} The newly created field editor.
+         */
+        self.createNewFieldEditor = function (path, deletableFields, $inputs) {
+            var $div = $("<div>");
+
+            var $nameInput = $("<input>", {
+                type: "text"
+            });
+
+            var $possibleValuesSelect = $("<select>", {
+                multiple: "multiple"
+            });
+
+            var $typeSelect = $("<select>", {
+                on: {
+                    change: function () {
+                        var type = $(this).val();
+                        var $clone = JsonEdit.inputs[type].clone()
+                            .attr("data-json-editor-type", type);
+                        $possibleValueInput.replaceWith($clone);
+                        $possibleValueInput = $clone;
+                        self.setValueToElement($possibleValueInput,
+                                getDefaultValueForType(type));
+                        $possibleValuesSelect.empty();
+                    }
+                }
+            });
+            for (var i = 0; i < knownElementaryFieldTypes.length; i++) {
+                $typeSelect.append($("<option>", {
+                    value: knownElementaryFieldTypes[i],
+                    text: knownElementaryFieldTypes[i]
+                }));
+            }
+
+            var $labelInput = $("<input>", {
+                type: "text"
+            });
+
+            var $possibleValuesDiv = $("<div>", {
+                css: {
+                    display: "none"
+                }
+            });
+
+            var $checkboxPossibleValues = $("<input>", {
+                type: "checkbox",
+                on: {
+                    change: function (e) {
+                        $possibleValuesDiv.toggle(this.checked);
+                    }
+                }
+            });
+
+            var $possibleValueInput = $("<input>", {
+            });
+
+            var $addPossibleValueButton = $("<input>", {
+                type: "button",
+                value: "+ Add possible value",
+                on: {
+                    click: function () {
+                        var val = self.getValueFromElement(
+                                $possibleValueInput);
+                        $possibleValuesSelect.append($("<option>", {
+                            value: val,
+                            text: val
+                        }));
+                    }
+                }
+            });
+
+            var $deletePossibleValueButton = $("<input>", {
+                type: "button",
+                value: "× Delete selected possible values",
+                on: {
+                    click: function () {
+                        $possibleValuesSelect.children("option:selected").remove();
+                    }
+                }
+            });
+
+            /*!
+             * nameAlreadyExists
+             * A function that determines whether the given name already exists
+             * in a field under the path in which the user tries to create a new
+             * field.
+             *
+             * @name nameAlreadyExists
+             * @function
+             * @param {String} name The name of the field to search for.
+             * @return {Boolean} True if the name already exists, false
+             * otherwise.
+             */
+            function nameAlreadyExists(name) {
+                // Convert the array of jQuery elements to a jQuery object with
+                // multiple elements.
+                var $inputs2 = $($.map($inputs,
+                            function (e) { return e.get(0); }));
+
+                // Obtain the data at the path where the new field is created.
+                var data = self.getData(path, $inputs2);
+
+                // Return true if the given name is already in the data,
+                // otherwise return false.
+                return Object.keys(data).indexOf(name) > -1;
+            }
+
+            var $addFieldButton = $("<input>", {
+                type: "button",
+                value: "+ Add field",
+                on: {
+                    click: function () {
+                        $nameInput.val($nameInput.val()
+                                .replace(/\./g, "").trim());
+                        $labelInput.val($labelInput.val().trim());
+
+                        var name = $nameInput.val();
+                        var label = $labelInput.val() || name;
+
+                        // Validate.
+                        if (name === "+" || name.length === 0 ||
+                                nameAlreadyExists(name)) {
+                            alert("The name of the field should be a" +
+                                    " non-empty string without dots, " +
+                                    "different than \"+\" and not " +
+                                    "already existing under the " +
+                                    "path \"" + path + "\".");
+                            return;
+                        }
+
+                        var newSchema = {
+                            name: name,
+                            label: label,
+                            type: $typeSelect.val(),
+                            path: path + "." + name,
+                            deletable: deletableFields
+                        };
+                        if ($checkboxPossibleValues.prop("checked")) {
+                            var possibleValues = [];
+                            var converter = self.converters[newSchema.type];
+                            $possibleValuesSelect.children("option").each(
+                                function (i, e) {
+                                    possibleValues.push(converter($(e).val()));
+                                });
+                            newSchema.possible = possibleValues;
+                        }
+
+                        $div.before(self.createGroup(newSchema));
+
+                        $nameInput.add($labelInput, $typeSelect,
+                                $possibleValueInput).val(null);
+                        $possibleValuesSelect.empty();
+                        $checkboxPossibleValues.prop("checked", false)
+                            .trigger("change");
+                        $typeSelect.trigger("change");
+                    }
+                }
+            });
+
+            $typeSelect.trigger("change");
+            $div.append($("<hr>"),
+                    $("<strong>").text("Add field"),
+                    $("<br>"),
+                    $("<label>").text("Name: ").append($nameInput),
+                    $("<label>").text("Type: ").append($typeSelect),
+                    $("<label>").text("Label (optional, without final semicolon): ")
+                        .append($labelInput),
+                    $("<br>"),
+                    $("<label>").text("Enable possible values: ")
+                        .append($checkboxPossibleValues),
+                    $possibleValuesDiv.append($possibleValuesSelect,
+                        $possibleValueInput, $addPossibleValueButton,
+                        $deletePossibleValueButton),
+                    $addFieldButton);
+            return $div;
         };
 
         /**
