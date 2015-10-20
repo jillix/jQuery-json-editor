@@ -550,7 +550,7 @@
                 }
 
                 if (field.addField) {
-                    $input.push(self.createNewFieldEditor(field.path,
+                    $input.push(self.createNewFieldEditor(true, field.path,
                                 field.deletableFields, $input));
                 }
             } else {
@@ -646,6 +646,8 @@
          *
          * @name createNewFieldEditor
          * @function
+         * @param {Boolean} newFields True if the new field editor will create
+         * new fields instead of editing existing fields, false otherwise.
          * @param {String} path The path to the object in which the new field
          * editor will be inserted.
          * @param {Boolean} deletableFields Whether the fields created by this
@@ -655,15 +657,21 @@
          * new field editor destination in the UI.
          * @return {jQuery} The newly created field editor.
          */
-        self.createNewFieldEditor = function (path, deletableFields, $inputs) {
-            var $div = $("<div>");
+        self.createNewFieldEditor = function (newFields, path, deletableFields,
+                $inputs) {
+            var $div = $("<div>", {
+                class: "json-editor-" + (newFields ? "new" : "edit") +
+                    "-field-form"
+            });
 
             var $nameInput = $("<input>", {
-                type: "text"
+                type: "text",
+                class: "json-editor-field-name"
             });
 
             var $possibleValuesSelect = $("<select>", {
-                multiple: "multiple"
+                multiple: "multiple",
+                class: "json-editor-field-possible-values"
             });
 
             var $typeSelect = $("<select>", {
@@ -678,7 +686,8 @@
                                 getDefaultValueForType(type));
                         $possibleValuesSelect.empty();
                     }
-                }
+                },
+                class: "json-editor-field-type"
             });
             for (var i = 0; i < knownElementaryFieldTypes.length; i++) {
                 $typeSelect.append($("<option>", {
@@ -688,13 +697,15 @@
             }
 
             var $labelInput = $("<input>", {
-                type: "text"
+                type: "text",
+                class: "json-editor-field-label"
             });
 
             var $possibleValuesDiv = $("<div>", {
                 css: {
                     display: "none"
-                }
+                },
+                class: "json-editor-possible-values-section"
             });
 
             var $checkboxPossibleValues = $("<input>", {
@@ -703,7 +714,8 @@
                     change: function (e) {
                         $possibleValuesDiv.toggle(this.checked);
                     }
-                }
+                },
+                class: "json-editor-field-enable-possible-values"
             });
 
             var $possibleValueInput = $("<input>", {
@@ -712,6 +724,7 @@
             var $addPossibleValueButton = $("<input>", {
                 type: "button",
                 value: "+ Add possible value",
+                class: "json-editor-add-possible-value-button",
                 on: {
                     click: function () {
                         var val = self.getValueFromElement(
@@ -727,6 +740,7 @@
             var $deletePossibleValueButton = $("<input>", {
                 type: "button",
                 value: "× Delete selected possible values",
+                class: "json-editor-delete-possible-value-button",
                 on: {
                     click: function () {
                         $possibleValuesSelect.children("option:selected").remove();
@@ -763,6 +777,7 @@
             var $addFieldButton = $("<input>", {
                 type: "button",
                 value: "+ Add field",
+                class: "json-editor-add-field-button",
                 on: {
                     click: function () {
                         $nameInput.val($nameInput.val()
@@ -815,7 +830,7 @@
             });
 
             $typeSelect.trigger("change");
-            $div.append($("<label>").append($("<hr>"),
+            $div.append($("<form>").append($("<label>").append($("<hr>"),
                     $("<strong>").text("Add field"),
                     $("<br>"),
                     $("<label>").text("Name: ").append($nameInput),
@@ -828,7 +843,7 @@
                     $possibleValuesDiv.append($possibleValuesSelect,
                         $possibleValueInput, $addPossibleValueButton,
                         $deletePossibleValueButton),
-                    $addFieldButton));
+                    $addFieldButton)));
             return $div;
         };
 
