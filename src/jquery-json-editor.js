@@ -800,7 +800,9 @@
                             newSchema.possible = possibleValues;
                         }
 
-                        $div.before(self.createGroup(newSchema));
+                        var $newGroup = self.createGroup(newSchema);
+                        $inputs.push($newGroup);
+                        $div.before($newGroup);
 
                         $nameInput.add($labelInput, $typeSelect,
                                 $possibleValueInput).val(null);
