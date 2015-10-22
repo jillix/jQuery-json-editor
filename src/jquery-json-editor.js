@@ -1055,11 +1055,10 @@
         self.setData = function (path, data, root) {
             root = root || self.container;
 
+            // Traverse all the fields in the UI.
             $("[data-json-editor-path]", root).each(function () {
                 var $this = $(this);
-
                 var type = $this.attr("data-json-editor-type");
-                if (type === "array") { return; }
 
                 var p = $this.attr("data-json-editor-path");
                 // If the current path does not start with the given path,
@@ -1073,6 +1072,31 @@
                 }
 
                 var val = findValue(data, p);
+
+                // When we deal with an array (in the UI, that means a table),
+                // we delete unnecessary table rows and add new necessary table
+                // rows, then we return without setting the value (which is a
+                // JavaScript array) to the `$this` element  because the values
+                // of the rows that are not removed because they are unnecessary
+                // will be set in further calls of the jQuery `each` callback,
+                // and the newly added rows are added using the `add` method
+                // which also sets the values.
+                if (type === "array") {
+                    var $tbody = $this.children("tbody");
+
+                    // Remove extra unnecessary table rows.
+                    $tbody.children("tr").slice(val.length).remove();
+
+                    // Add the remaining new necessary rows using the `add`
+                    // method which also sets the values.
+                    for (var i = $tbody.children("tr").length; i < val.length;
+                            i++) {
+                        self.add($this, val[i]);
+                    }
+
+                    return;
+                }
+
                 // If the value for path `p` is not given, set a default value.
                 if (typeof val === "undefined") {
                     val = getDefaultValueForType(type);
@@ -1104,6 +1128,8 @@
 
             var directValue = false;
             var data = {};
+
+            // Traverse all the fields in the UI.
             $("[data-json-editor-path]", root).each(function () {
                 var $this = $(this);
                 var type = $this.attr("data-json-editor-type");
