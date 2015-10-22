@@ -1106,9 +1106,7 @@
             var data = {};
             $("[data-json-editor-path]", root).each(function () {
                 var $this = $(this);
-
                 var type = $this.attr("data-json-editor-type");
-                if (type === "array") { return; }
 
                 var p = $this.attr("data-json-editor-path");
                 // If the current path does not start with the given path (which
@@ -1127,15 +1125,32 @@
                 // a new item editor in a table, skip.
                 if (!includeNewItemEditors && /(\.\+$|\.\+\.)/.test(p)) { return; }
 
-                var val = self.getValueFromElement($this);
+                var val;
+                // If `type` is "array" we set the value to an empty array to be
+                // sure that an array with no elements will still be in the
+                // generated data. The elements of the array will be read from
+                // other jQuery elements with paths ending in ".X" or
+                // containing ".X." where `X` is a number.
+                if (type === "array") {
+                    val = [];
+                } else {
+                    // If `type` is not an array we read the value from the
+                    // jQuery element.
+                    val = self.getValueFromElement($this);
+                }
                 if (p.length > 0) { // If the given path is not a direct value
+                    // set the value in the `data` object at the specified
+                    // path.
                     data[p] = val;
                 } else {
+                    // If it is a direct value, at the end of the function we
+                    // will return `data` without processing it.
                     directValue = true;
                     data = val;
                 }
             });
 
+            // Handle fields with editable names.
             $("[data-json-object-key]", root).each(function () {
                 var $this = $(this);
                 var path = $this.attr("data-json-key-path");
