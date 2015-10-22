@@ -640,7 +640,7 @@
             });
         };
 
-        /*!
+        /**
          * createNewFieldEditor
          * Returns a jQuery object containing a new field editor.
          *
