@@ -435,10 +435,20 @@
                 // Convert the possible values to strings and add them to the
                 // `<select>`.
                 for (var i = 0; i < field.possible.length; i++) {
-                    var t = field.possible[i].toString();
+                    var val = field.possible[i];
+                    var text = JsonEdit.converters.string(val);
+                    // For the `value` attribute of the <option> element we do
+                    // not use `JsonEdit.converters.string` because the date
+                    // string obtained with it cannot be parsed easily with a
+                    // general algorithm (for example parsing "22.10.2015" with
+                    // the `Date` constructor returns an invalid date) and the
+                    // `toString` `Date` method always returns a string
+                    // representation of the date in American English
+                    // (according to the `Date` `toString` page on
+                    // developer.mozilla.org).
                     $input.append($("<option>", {
-                        value: t,
-                        text: t
+                        value: val.toString(),
+                        text: text
                     }));
                 }
 
@@ -727,11 +737,15 @@
                 class: "json-editor-add-possible-value-button",
                 on: {
                     click: function () {
-                        var val = self.getValueFromElement(
-                                $possibleValueInput);
+                        var val = self.getValueFromElement($possibleValueInput);
+                        var text = JsonEdit.converters.string(val);
+                        // See the explanation in the `createGroup` method,
+                        // `field.possible` if branch, for the reason why we do
+                        // not use `JsonEdit.converters.string` for the `value`
+                        // attribute of the `<option>` element.
                         $possibleValuesSelect.append($("<option>", {
-                            value: val,
-                            text: val
+                            value: val.toString(),
+                            text: text
                         }));
                     }
                 }
@@ -1211,6 +1225,9 @@
             return (value === true || value === "true" || value === "on" || typeof value === "number" && value > 0 || value === "1");
         },
         string: function (value) {
+            if (Object.prototype.toString.call(value) === "[object Date]") {
+                return value.toLocaleDateString();
+            }
             return value.toString();
         },
         number: function (value) {
