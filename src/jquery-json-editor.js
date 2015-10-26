@@ -561,7 +561,7 @@
 
                 if (field.addField) {
                     $input.push(self.createNewFieldEditor(true, field.path,
-                                field.deletableFields, $input));
+                                field.deletableFields, $group));
                 }
             } else {
                 // If the field data is not specified, use a default value.
@@ -662,13 +662,13 @@
          * editor will be inserted.
          * @param {Boolean} deletableFields Whether the fields created by this
          * field editor will be deletable.
-         * @param {Array} $inputs An array of jQuery elements representing the
-         * group elements containing input elements at the same level as the
-         * new field editor destination in the UI.
+         * @param {jQuery} $parent The jQuery element which is the parent of all
+         * the group elements at the same level as the new field editor
+         * destination in the UI.
          * @return {jQuery} The newly created field editor.
          */
         self.createNewFieldEditor = function (newFields, path, deletableFields,
-                $inputs) {
+                $parent) {
             var $div = $("<div>", {
                 class: "json-editor-" + (newFields ? "new" : "edit") +
                     "-field-form"
@@ -775,13 +775,8 @@
              * otherwise.
              */
             function nameAlreadyExists(name) {
-                // Convert the array of jQuery elements to a jQuery object with
-                // multiple elements.
-                var $inputs2 = $($.map($inputs,
-                            function (e) { return e.get(0); }));
-
                 // Obtain the data at the path where the new field is created.
-                var data = self.getData(path, $inputs2);
+                var data = self.getData(path, $parent);
 
                 // Return true if the given name is already in the data,
                 // otherwise return false.
@@ -829,9 +824,7 @@
                             newSchema.possible = possibleValues;
                         }
 
-                        var $newGroup = self.createGroup(newSchema);
-                        $inputs.push($newGroup);
-                        $div.before($newGroup);
+                        $div.before(self.createGroup(newSchema));
 
                         $nameInput.add($labelInput, $typeSelect,
                                 $possibleValueInput).val(null);
