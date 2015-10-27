@@ -126,8 +126,18 @@
      * with numbers as keys converted to an array or an object with arrays.
      */
     function handleArrays(obj) {
-        var convert = true;
-        var keys = Object.keys(obj).map(function (key) {
+        // Get the keys of the object, which may be numbers as strings.
+        var keys = Object.keys(obj);
+        // We expect that the object will be converted to an array only if it is
+        // not an empty object. If it is an empty object, it will remain an
+        // empty object.
+        var convert = keys.length !== 0;
+        // We convert the keys array to an array of ints. If we detect a key
+        // that cannot be converted to an int, we set the flag variable
+        // `convert` to false, so we do not treat the object as one that should
+        // be converted to an array (but we still call `handleArrays`
+        // recursively on the subobjects.
+        keys = keys.map(function (key) {
             var val = parseInt(key, 10);
             if (isNaN(val)) {
                 convert = false;
@@ -135,6 +145,11 @@
             return val;
         }).sort();
 
+        // If the `convert` flag variable is set to true, we create the `arr`
+        // variable as an empty array which we will fill. If it is not set to
+        // true, we set `arr` to the original object, and then later we call the
+        // `handleArrays` function recursively on subobjects. Finally, we return
+        // `arr`.
         var arr = convert ? [] : obj;
         if (!convert) {
             for (var k in obj) {
@@ -144,7 +159,9 @@
             }
         } else {
             keys.forEach(function (key) {
-                if (obj[key] && obj[key].constructor === Object) return (arr[key] = handleArrays(obj[key]));
+                if (obj[key] && obj[key].constructor === Object) {
+                    return (arr[key] = handleArrays(obj[key]));
+                }
                 arr.push(obj[key]);
             });
         }
@@ -547,6 +564,14 @@
                 }
 
             } else if (field.type === "object") {
+                // The path attribute is read from the `createNewFieldEditor`
+                // method and the type attribute is read from the `setData` and
+                // `getData` methods.
+                $group.attr({
+                    "data-json-editor-path": field.path,
+                    "data-json-editor-type": "object"
+                });
+
                 $input = [];
                 var order = field.schema[ORDER_PROPERTY];
                 for (var i = 0; i < order.length; i++) {
@@ -555,13 +580,15 @@
                     $input.push(self.createGroup($.extend(true, {}, cField, {
                         path: field.path + "." + k,
                         _edit: field.edit,
-                        deletable: field.deletableFields
+                        deletable: field.deletableFields,
+                        editable: field.editableFields
                     })));
                 }
 
                 if (field.addField) {
-                    $input.push(self.createNewFieldEditor(true, field.path,
-                                field.deletableFields, $group));
+                    $input.push(self.createNewFieldEditor(true,
+                                field.deletableFields, field.editableFields,
+                                $group));
                 }
             } else {
                 // If the field data is not specified, use a default value.
@@ -594,6 +621,17 @@
                             // element contains the input element and the Delete
                             // field button).
                             $group.remove();
+                        }
+                    }
+                }));
+            }
+            if (field.editable) {
+                $label.append($("<input>", {
+                    type: "button",
+                    value: "✎ Edit field",
+                    on: {
+                        click: function () {
+
                         }
                     }
                 }));
@@ -658,17 +696,20 @@
          * @function
          * @param {Boolean} newFields True if the new field editor will create
          * new fields instead of editing existing fields, false otherwise.
-         * @param {String} path The path to the object in which the new field
-         * editor will be inserted.
          * @param {Boolean} deletableFields Whether the fields created by this
          * field editor will be deletable.
-         * @param {jQuery} $parent The jQuery element which is the parent of all
-         * the group elements at the same level as the new field editor
-         * destination in the UI.
+         * @param {Boolean} editableFields Whether the fields created by this
+         * field editor will be editable.
+         * @param {jQuery} $parent The jQuery element which is the direct parent
+         * of all the group elements at the same level as the new field editor
+         * destination in the UI and has the `data-json-editor-path` attribute
+         * set to the correct path.
          * @return {jQuery} The newly created field editor.
          */
-        self.createNewFieldEditor = function (newFields, path, deletableFields,
-                $parent) {
+        self.createNewFieldEditor = function (newFields, deletableFields,
+                editableFields, $parent) {
+            var path = $parent.attr("data-json-editor-path") || "";
+
             var $div = $("<div>", {
                 class: "json-editor-" + (newFields ? "new" : "edit") +
                     "-field-form"
@@ -812,7 +853,8 @@
                             label: label,
                             type: $typeSelect.val(),
                             path: path + "." + name,
-                            deletable: deletableFields
+                            deletable: deletableFields,
+                            editable: editableFields
                         };
                         if ($checkboxPossibleValues.prop("checked")) {
                             var possibleValues = [];
@@ -904,6 +946,15 @@
                 $tr.append($("<td>").append(self.createGroup(newSchema),
                             $deleteButton));
             } else {
+                // Only set these two attributes if the array to which we are
+                // adding a new item is an array of objects, because when it is
+                // an array of simple objects, the attributes are already set to
+                // the inner input elements inside the table cells.
+                $tr.attr({
+                    "data-json-editor-type": "object",
+                    "data-json-editor-path": path + "." + nextIndex
+                });
+
                 // An array with the names of all the fields directly in this
                 // schema
                 var order = fieldSchema.schema[ORDER_PROPERTY];
@@ -1066,6 +1117,10 @@
             $("[data-json-editor-path]", root).each(function () {
                 var $this = $(this);
                 var type = $this.attr("data-json-editor-type");
+                // If the type is "object", expect that this jQuery `each` loop
+                // will reach the inputs representing fields under this object
+                // so we do not need to do anything now.
+                if (type === "object") return;
 
                 var p = $this.attr("data-json-editor-path");
                 // If the current path does not start with the given path,
@@ -1166,6 +1221,10 @@
                 // containing ".X." where `X` is a number.
                 if (type === "array") {
                     val = [];
+                } else if (type === "object") {
+                    // Handle objects without fields. (They might have a purpose
+                    // if they have the `addField: true` property set.)
+                    val = {};
                 } else {
                     // If `type` is not an array we read the value from the
                     // jQuery element.

@@ -61,6 +61,7 @@ a = {
             label: " ",
             addField: true,
             deletableFields: true,
+            editableFields: true,
             schema: {
                 _order: ["first", "last"],
                 first: { label: "First Name" },
@@ -115,6 +116,7 @@ a = {
         },
         dateFieldWithPossibleValues: {
             label: "Choose a date",
+            editable: true,
             possible: [
                 new Date(2015, 7, 3),
                 new Date(2014, 8, 9),
