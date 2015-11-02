@@ -621,6 +621,15 @@
                             // element contains the input element and the Delete
                             // field button).
                             $group.remove();
+                            // Also update the schema in the `settings.schema`
+                            // variable. First get the schema of the path
+                            // created by removing the last segment of
+                            // `field.path`.
+                            var sch = self.getSchemaAtPath(field.path.split(".")
+                                    .slice(0, -1).join(".")).schema;
+                            var order = sch[ORDER_PROPERTY];
+                            order.splice(order.indexOf(field.name), 1);
+                            delete sch[field.name];
                         }
                     }
                 }));
@@ -650,6 +659,47 @@
                 }));
             }
             return $group;
+        };
+
+        /**
+         * getSchemaAtPath
+         * Extracts the part of the `settings.schema` variable at the specified
+         * `path`.
+         *
+         * @name getSchemaAtPath
+         * @function
+         * @param {String} path Required, the path at which to get the schema.
+         * @return {Object} The schema at the specified path.
+         */
+        self.getSchemaAtPath = function (path) {
+            if (path.length === 0) {
+                return {
+                    schema: settings.schema
+                };
+            }
+
+            var fieldPathParts = path.split(".");
+            var currentPart = fieldPathParts[0];
+            var currentVal = settings.schema[currentPart];
+            for (var i = 1; i < fieldPathParts.length; i++) {
+                currentPart = fieldPathParts[i];
+                currentVal = currentVal.schema[currentPart];
+            }
+            return currentVal;
+        };
+
+        /**
+         * getNameFromPath
+         * Extracts the name of a field from its path.
+         *
+         * @name getNameFromPath
+         * @function
+         * @param {String} path Required, the path from which to extract the
+         * name.
+         * @return {String} The name of the field with the specified path.
+         */
+        self.getNameFromPath = function (path) {
+            return path.split(".").pop();
         };
 
         /**
@@ -713,10 +763,12 @@
          * field editor will be deletable.
          * @param {Boolean} editableFields Whether the fields created by this
          * field editor will be editable.
-         * @param {jQuery} $parent The jQuery element which is the direct parent
-         * of all the group elements at the same level as the new field editor
-         * destination in the UI and has the `data-json-editor-path` attribute
-         * set to the correct path.
+         * @param {jQuery} [$parent] The jQuery element which is the direct
+         * parent of all the group elements at the same level as the new field
+         * editor destination in the UI and has the `data-json-editor-path`
+         * attribute set to the correct path. If it is not set or it does not
+         * have this attribute set, the `self.container` element and an empty
+         * path string will be used.
          * @param {jQuery} [$editedGroup] The jQuery element representing the
          * field which is edited by the newly created field editor. It is
          * required only when `newFields` is set to `false`.
@@ -724,6 +776,7 @@
          */
         self.createNewFieldEditor = function (newFields, deletableFields,
                 editableFields, $parent, $editedGroup) {
+            $parent = $parent && $parent.length > 0 ? $parent : self.container;
             var path = $parent.attr("data-json-editor-path") || "";
 
             var $div = $("<div>", {
@@ -875,7 +928,7 @@
                             name: name,
                             label: label,
                             type: type,
-                            path: path + "." + name,
+                            path: (path ? path + "." : "") + name,
                             deletable: deletableFields,
                             editable: editableFields,
                             data: getDefaultValueForType(type)
@@ -891,6 +944,21 @@
                                 });
                             newSchema.possible = possibleValues;
                         }
+
+                        // Update the schema in the `settings.schema` variable.
+                        var newSchemaWithoutData = $.extend(true, {}, newSchema);
+                        delete newSchemaWithoutData.data;
+                        var sch = self.getSchemaAtPath(path).schema;
+                        var order = sch[ORDER_PROPERTY];
+                        if (newFields) {
+                            order.push(name);
+                        } else {
+                            var oldName = self.getNameFromPath($editedInput
+                                    .attr("data-json-editor-path"));
+                            delete sch[oldName];
+                            order[order.indexOf(oldName)] = name;
+                        }
+                        sch[name] = newSchemaWithoutData;
 
                         // Create the UI for the schema and add it before before
                         // the field editor.
@@ -919,24 +987,17 @@
                 }
             });
 
+            // Call this handler to update the possible value input to the
+            // correct type and to clear the possible values list before the
+            // possible values from the old schema are inserted in it below.
+            $typeSelect.trigger("change");
+
             // If this condition is met, $editedGroup is a valid jQuery
             // element.
             if (!newFields) {
-                $editedGroup = $editedGroup.find("[data-json-editor-path]");
-                var fieldPath = $editedGroup.attr("data-json-editor-path");
-
-                function getSchemaAtPath(path) {
-                    var fieldPathParts = fieldPath.split(".");
-                    var currentPart = fieldPathParts[0];
-                    var currentVal = settings.schema[currentPart];
-                    for (var i = 1; i < fieldPathParts.length; i++) {
-                        currentPart = fieldPathParts[i];
-                        currentVal = currentVal.schema[currentPart];
-                    }
-                    return currentVal;
-                }
-
-                var oldSchema = getSchemaAtPath(fieldPath);
+                var $editedInput = $editedGroup.find("[data-json-editor-path]");
+                var fieldPath = $editedInput.attr("data-json-editor-path");
+                var oldSchema = self.getSchemaAtPath(fieldPath);
 
                 $typeSelect.val(oldSchema.type)
                     .trigger("change");
@@ -960,7 +1021,6 @@
                 }
             }
 
-            $typeSelect.trigger("change");
             var $label = $("<label>");
             $div.append($("<form>").append($label.append($("<hr>"),
                     $("<strong>").text((newFields ? "Add" : "Edit") + " field"),
@@ -985,7 +1045,10 @@
                     value: "Cancel",
                     on: {
                         click: function () {
-                            $editedGroup.removeClass("json-editor-edited");
+                            // There is an edited field which should be marked
+                            // as not being edited anymore.
+                            $editedInput.removeClass("json-editor-edited");
+                            // Delete the field editor from the document.
                             $div.remove();
                         }
                     }
@@ -1290,7 +1353,7 @@
             var directValue = false;
             var data = {};
 
-            // Traverse all the fields in the UI.
+            // Traverse all the fields in the UI which are not being edited.
             $("[data-json-editor-path]:not(.json-editor-edited)", root)
                     .each(function () {
                 var $this = $(this);
