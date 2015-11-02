@@ -961,7 +961,8 @@
             }
 
             $typeSelect.trigger("change");
-            $div.append($("<form>").append($("<label>").append($("<hr>"),
+            var $label = $("<label>");
+            $div.append($("<form>").append($label.append($("<hr>"),
                     $("<strong>").text((newFields ? "Add" : "Edit") + " field"),
                     $("<br>"),
                     $("<label>").text("Name: ").append($nameInput),
@@ -975,6 +976,22 @@
                         $possibleValueInput, $addPossibleValueButton,
                         $deletePossibleValueButton),
                     $addFieldButton)));
+
+            // If this is an editor for an existing field,
+            if (!newFields) {
+                // also show a Cancel button.
+                $label.append($("<input>", {
+                    type: "button",
+                    value: "Cancel",
+                    on: {
+                        click: function () {
+                            $editedGroup.removeClass("json-editor-edited");
+                            $div.remove();
+                        }
+                    }
+                }));
+            }
+
             return $div;
         };
 
