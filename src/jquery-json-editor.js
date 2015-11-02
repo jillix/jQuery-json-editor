@@ -631,7 +631,20 @@
                     value: "✎ Edit field",
                     on: {
                         click: function () {
-
+                            // This class, json-editor-edited, indicates that
+                            // the field is being edited (with an editor
+                            // created with the `createNewFieldEditor` method)
+                            // and is used in the `getData` and in the
+                            // `nameAlreadyExists` functions to exclude the
+                            // edited field from the data and from the list of
+                            // duplicate names.
+                            $group.find("[data-json-editor-path]")
+                                .addClass("json-editor-edited");
+                            var $editor = self.createNewFieldEditor(false,
+                                    field.deletable, true,
+                                    $group.closest("[data-json-editor-path]"),
+                                    $group);
+                            $group.after($editor);
                         }
                     }
                 }));
@@ -704,10 +717,13 @@
          * of all the group elements at the same level as the new field editor
          * destination in the UI and has the `data-json-editor-path` attribute
          * set to the correct path.
+         * @param {jQuery} [$editedGroup] The jQuery element representing the
+         * field which is edited by the newly created field editor. It is
+         * required only when `newFields` is set to `false`.
          * @return {jQuery} The newly created field editor.
          */
         self.createNewFieldEditor = function (newFields, deletableFields,
-                editableFields, $parent) {
+                editableFields, $parent, $editedGroup) {
             var path = $parent.attr("data-json-editor-path") || "";
 
             var $div = $("<div>", {
@@ -826,18 +842,23 @@
 
             var $addFieldButton = $("<input>", {
                 type: "button",
-                value: "+ Add field",
+                value: (newFields ? "+ Add" : "💾 Save") + " field",
                 class: "json-editor-add-field-button",
                 on: {
                     click: function () {
+                        // Remove dots from the name and remove the whitespace
+                        // around it.
                         $nameInput.val($nameInput.val()
                                 .replace(/\./g, "").trim());
+                        // Remove the whitespace around the label.
                         $labelInput.val($labelInput.val().trim());
 
                         var name = $nameInput.val();
+                        // The default label is the name of the field.
                         var label = $labelInput.val() || name;
 
-                        // Validate.
+                        // Validate the name. It should not be a duplicate, it
+                        // should be different than "+" and not an empty string.
                         if (name === "+" || name.length === 0 ||
                                 nameAlreadyExists(name)) {
                             alert("The name of the field should be a" +
@@ -848,14 +869,19 @@
                             return;
                         }
 
+                        var type = $typeSelect.val();
+                        // Build the schema of the new or modified field.
                         var newSchema = {
                             name: name,
                             label: label,
-                            type: $typeSelect.val(),
+                            type: type,
                             path: path + "." + name,
                             deletable: deletableFields,
-                            editable: editableFields
+                            editable: editableFields,
+                            data: getDefaultValueForType(type)
                         };
+                        // If the possible values checkbox is enabled, add the
+                        // entered possible values to the schema.
                         if ($checkboxPossibleValues.prop("checked")) {
                             var possibleValues = [];
                             var converter = self.converters[newSchema.type];
@@ -866,8 +892,23 @@
                             newSchema.possible = possibleValues;
                         }
 
+                        // Create the UI for the schema and add it before before
+                        // the field editor.
                         $div.before(self.createGroup(newSchema));
 
+                        // If this editor does not create new fields (it just
+                        // edits an existing field), after the UI is created
+                        // above, remove the field editor and the old field UI
+                        // from the document.
+                        if (!newFields) {
+                            $editedGroup.remove();
+                            $div.remove();
+                            return;
+                        }
+
+                        // If this editor creates new fields, it should not be
+                        // removed from the UI after submitting, so we reset its
+                        // values to the default ones.
                         $nameInput.add($labelInput, $typeSelect,
                                 $possibleValueInput).val(null);
                         $possibleValuesSelect.empty();
@@ -878,9 +919,50 @@
                 }
             });
 
+            // If this condition is met, $editedGroup is a valid jQuery
+            // element.
+            if (!newFields) {
+                $editedGroup = $editedGroup.find("[data-json-editor-path]");
+                var fieldPath = $editedGroup.attr("data-json-editor-path");
+
+                function getSchemaAtPath(path) {
+                    var fieldPathParts = fieldPath.split(".");
+                    var currentPart = fieldPathParts[0];
+                    var currentVal = settings.schema[currentPart];
+                    for (var i = 1; i < fieldPathParts.length; i++) {
+                        currentPart = fieldPathParts[i];
+                        currentVal = currentVal.schema[currentPart];
+                    }
+                    return currentVal;
+                }
+
+                var oldSchema = getSchemaAtPath(fieldPath);
+
+                $typeSelect.val(oldSchema.type)
+                    .trigger("change");
+                $nameInput.val(oldSchema.name);
+                $labelInput.val(oldSchema.label);
+                if (oldSchema.possible) {
+                    $checkboxPossibleValues.prop("checked", true)
+                        .trigger("change");
+                    for (var i = 0; i < oldSchema.possible.length; i++) {
+                        var val = oldSchema.possible[i];
+                        var text = JsonEdit.converters.string(val);
+                        // See the explanation in the `createGroup` method,
+                        // `field.possible` if branch, for the reason why we do
+                        // not use `JsonEdit.converters.string` for the `value`
+                        // attribute of the `<option>` element.
+                        $possibleValuesSelect.append($("<option>", {
+                            value: val.toString(),
+                            text: text
+                        }));
+                    }
+                }
+            }
+
             $typeSelect.trigger("change");
             $div.append($("<form>").append($("<label>").append($("<hr>"),
-                    $("<strong>").text("Add field"),
+                    $("<strong>").text((newFields ? "Add" : "Edit") + " field"),
                     $("<br>"),
                     $("<label>").text("Name: ").append($nameInput),
                     $("<label>").text("Type: ").append($typeSelect),
@@ -1192,7 +1274,8 @@
             var data = {};
 
             // Traverse all the fields in the UI.
-            $("[data-json-editor-path]", root).each(function () {
+            $("[data-json-editor-path]:not(.json-editor-edited)", root)
+                    .each(function () {
                 var $this = $(this);
                 var type = $this.attr("data-json-editor-type");
 
