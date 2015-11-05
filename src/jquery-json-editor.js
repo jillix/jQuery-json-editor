@@ -403,6 +403,55 @@
             converters: $.extend(JsonEdit.converters, opt_options.converters),
         };
 
+        /*!
+         * createAddButton
+         * Returns a new add button to be inserted in a table (the UI for an
+         * array).
+         *
+         * @name createAddButton
+         * @function
+         * @return The new add button.
+         */
+        function createAddButton($table) {
+            return $("<input>", {
+                type: "button",
+                val: "+",
+                on: {
+                    click: function () {
+                        var path = $table.attr("data-json-editor-path");
+                        self.add($table, self.getData(path + ".+", $table,
+                                    true));
+                        self.setData(path + ".+", {});
+                    }
+                },
+                "data-json-editor-control": "add"
+            });
+        }
+
+        /*!
+         * createDeleteButton
+         * Returns a new delete button to be inserted in a table (the UI for an
+         * array).
+         *
+         * @name createDeleteButton
+         * @function
+         * @param {jQuery} $table The jQuery element of the table representation
+         * of the array for which the delete button is created.
+         * @return The new delete button.
+         */
+        function createDeleteButton($table) {
+            return $("<button>", {
+                text: "×",
+                "data-json-editor-control": "delete",
+                on: {
+                    click: function () {
+                        self.delete($(this).closest("tr"));
+                        self.resetPathIndicesInTable($table);
+                    }
+                }
+            });
+        }
+
         /**
          * createGroup
          * Creates a form group and returns the jQuery object.
@@ -428,7 +477,14 @@
             }
 
             // Add label
-            $group.find("label").append($label);
+            var $labelContainer = $group.find("label");
+            // In fields of type "array" there is no <label> element because it
+            // would trigger a click event on buttons inside the table headers
+            // when clicking anywhere on the table.
+            if ($labelContainer.length === 0) {
+                $labelContainer = $group;
+            }
+            $labelContainer.append($label);
 
             var fieldData = field.data === undefined ? self.getValue(field.path) : field.data;
 
@@ -493,20 +549,97 @@
                     $tbody = $("<tbody>")
                 ]);
 
+                function deleteColumn($th) {
+                    // Get the table header row, the one which contains `$th`.
+                    var $tr = $th.closest("tr");
+                    // Get the index of the column which contains `$th`.
+                    var i = $th.index();
+                    // Get the table containing the `$th`.
+                    var $table = $tr.closest("table");
+                    // :nth-child selector uses 1-based indices. Select all the
+                    // table cells with the index (i + 1) inside the parent
+                    // rows, then remove them from the document.
+                    $table.find("td:nth-child(" + (i + 1) + ")").remove();
+                    // Also remove the column header `$th`.
+                    $th.remove();
+
+                    // Also remove the column (field) from the array schema so
+                    // that the add new field button will work correctly, will
+                    // not add the deleted field to the new array items.
+                    var path = $table.attr("data-json-editor-path");
+                    var name = $th.attr("data-json-editor-name");
+                    var sch = self.getSchemaAtPath(path);
+                    if (name.length > 0) {
+                        delete sch.schema[name];
+                        var order = sch.schema[ORDER_PROPERTY];
+                        order.splice(order.indexOf(name), 1);
+                    } else {
+                        sch.schema = {};
+
+                        // If the array schema contained a single field, add a
+                        // new column with the delete item and add item buttons
+                        // which existed only in the <td>s from the deleted
+                        // column.
+                        $table.find("tbody tr").each(function (i, e) {
+                            $(e).append($("<td>").append(
+                                        createDeleteButton($table)));
+                        });
+                        $table.find("tfoot tr").each(function (i, e) {
+                            $(e).append($("<td>").append(
+                                        createAddButton($table)));
+                        });
+                        // TODO: do the same when adding a new field to an array
+                        // with a single field and do the reverse when adding a
+                        // new field to an array with no fields.
+                    }
+                }
+
                 $headers = $thead.children("tr");
                 var headers = [];
                 // headers
                 var $ths = [];
                 if (typeof Object(field.schema).type === "string") {
                     headers.push(field.schema.name);
-                    $ths.push($("<th>", { text: field.schema.label || "Values" }));
+                    var $th = $("<th>", {
+                        text: field.schema.label || "Values",
+                        "data-json-editor-name": ""
+                    });
+                    if (field.deletableFields) {
+                        var $deleteFieldButton = $("<input>", {
+                            type: "button",
+                            value: "× Delete field",
+                            on: {
+                                click: function () {
+                                    deleteColumn($(this).parent());
+                                }
+                            }
+                        });
+                        $th.append($deleteFieldButton);
+                    }
+                    $ths.push($th);
                 } else {
                     var order = field.schema[ORDER_PROPERTY];
                     for (var i = 0; i < order.length; i++) {
                         var k = order[i];
                         var c = field.schema[k];
                         headers.push(c.name);
-                        $ths.push($("<th>", { text: c.label || "Values" }));
+                        var $th = $("<th>", {
+                            text: c.label || "Values",
+                            "data-json-editor-name": c.name
+                        });
+                        if (field.deletableFields) {
+                            var $deleteFieldButton = $("<input>", {
+                                type: "button",
+                                value: "× Delete field",
+                                on: {
+                                    click: function () {
+                                        deleteColumn($(this).parent());
+                                    }
+                                }
+                            });
+                            $th.append($deleteFieldButton);
+                        }
+                        $ths.push($th);
                     }
                 }
                 $headers.append($ths);
@@ -514,18 +647,7 @@
                 // footers (with add new item controls)
                 $footers = $tfoot.children("tr");
                 var $tdfs = [];
-                var $addButton = $("<input>", {
-                    type: "button",
-                    val: "+",
-                    on: {
-                        click: function () {
-                            self.add($input, self.getData(field.path + ".+",
-                                        $input, true));
-                            self.setData(field.path + ".+", {});
-                        }
-                    },
-                    "data-json-editor-control": "add"
-                });
+                var $addButton = createAddButton($input);
                 // TODO: maybe we should use self.add here too after extending
                 // it a bit, in both branches of the `if` structure:
                 if (typeof Object(field.schema).type === "string") {
@@ -606,12 +728,11 @@
 
             // Append the created input to the group element, the one returned
             // by the function.
-            var $label = $group.find("label");
-            $label.append($input);
+            $labelContainer.append($input);
             // If the field is marked as deletable, add a delete button after
             // its input element.
             if (field.deletable) {
-                $label.append($("<input>", {
+                $labelContainer.append($("<input>", {
                     type: "button",
                     value: "× Delete field",
                     on: {
@@ -635,7 +756,7 @@
                 }));
             }
             if (field.editable) {
-                $label.append($("<input>", {
+                $labelContainer.append($("<input>", {
                     type: "button",
                     value: "✎ Edit field",
                     on: {
@@ -727,8 +848,16 @@
             // For each row in the table
             $table.children("tbody").children("tr").each(function (i, tr) {
                 var $tr = $(tr);
+                var $firstElementWithPath = $tr
+                    .find("[data-json-editor-path]:first");
+                // If there is no element with path in this row, it means that
+                // this row does not have cells for any column so we can skip
+                // it.
+                if ($firstElementWithPath.length === 0) {
+                    return;
+                }
                 // get the index in the paths under the current row
-                var currentIndex = $tr.find("[data-json-editor-path]:first")
+                var currentIndex = $firstElementWithPath
                     .attr("data-json-editor-path");
                 currentIndex = currentIndex.substring(path.length + 1);
                 currentIndex = currentIndex.replace(/\..*$/, "");
@@ -1084,17 +1213,7 @@
             // The index of the newly added row, used in the paths
             var nextIndex = $tbody.children().length;
             var $tr = $("<tr>").appendTo($tbody);
-
-            var $deleteButton = $("<button>", {
-                text: "×",
-                "data-json-editor-control": "delete",
-                on: {
-                    click: function () {
-                        self.delete($(this).closest("tr"));
-                        self.resetPathIndicesInTable($elm);
-                    }
-                }
-            });
+            var $deleteButton = createDeleteButton($elm);
 
             // If the type of the schema is explicitly specified
             if (typeof Object(fieldSchema.schema).type === "string") {
@@ -1107,7 +1226,7 @@
                 delete newSchema.label;
                 $tr.append($("<td>").append(self.createGroup(newSchema),
                             $deleteButton));
-            } else {
+            } else if (!$.isEmptyObject(fieldSchema.schema)) {
                 // Only set these two attributes if the array to which we are
                 // adding a new item is an array of objects, because when it is
                 // an array of simple objects, the attributes are already set to
@@ -1140,6 +1259,8 @@
                     delete newSchema.label;
                     $tr.append($("<td>").append(self.createGroup(newSchema)));
                 }
+                $tr.append($("<td>").append($deleteButton));
+            } else { // $.isEmptyObject(fieldSchema.schema)
                 $tr.append($("<td>").append($deleteButton));
             }
         };
@@ -1462,7 +1583,7 @@
         "boolean":  $("<div>").append($("<label>")),
         "string":   $("<div>").append($("<label>")),
         "regexp":   $("<div>").append($("<label>")),
-        "array":    $("<div>").append($("<label>")),
+        "array":    $("<div>"),
         "object":   $("<div>").append($("<label>")),
         "date":     $("<div>").append($("<label>"))
     };
