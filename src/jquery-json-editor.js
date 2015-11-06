@@ -657,6 +657,14 @@
                         $ths.push($th);
                     }
                 }
+                if (field.addField) {
+                    $ths.push($("<th>").append(createNewFieldEditor({
+                        newFields: true,
+                        deletableFields: true,
+                        editableFields: true,
+                        parent: $input
+                    })));
+                }
                 $headers.append($ths);
 
                 // footers (with add new item controls)
@@ -702,8 +710,8 @@
 
             } else if (field.type === "object") {
                 // The path attribute is read from the `createNewFieldEditor`
-                // method and the type attribute is read from the `setData` and
-                // `getData` methods.
+                // function and the type attribute is read from the `setData`
+                // and `getData` methods.
                 $group.attr({
                     "data-json-editor-path": field.path,
                     "data-json-editor-type": "object"
@@ -723,9 +731,12 @@
                 }
 
                 if (field.addField) {
-                    $input.push(self.createNewFieldEditor(true,
-                                field.deletableFields, field.editableFields,
-                                $group));
+                    $input.push(createNewFieldEditor({
+                        newFields: true,
+                        deletableFields: field.deletableFields,
+                        editableFields: field.editableFields,
+                        parent: $group
+                    }));
                 }
             } else {
                 // If the field data is not specified, use a default value.
@@ -778,17 +789,20 @@
                         click: function () {
                             // This class, json-editor-edited, indicates that
                             // the field is being edited (with an editor
-                            // created with the `createNewFieldEditor` method)
+                            // created with the `createNewFieldEditor` function)
                             // and is used in the `getData` and in the
                             // `nameAlreadyExists` functions to exclude the
                             // edited field from the data and from the list of
                             // duplicate names.
                             $group.find("[data-json-editor-path]")
                                 .addClass("json-editor-edited");
-                            var $editor = self.createNewFieldEditor(false,
-                                    field.deletable, true,
-                                    $group.closest("[data-json-editor-path]"),
-                                    $group);
+                            var $editor = createNewFieldEditor({
+                                newFields: false,
+                                deletableFields: field.deletable,
+                                editableFields: true,
+                                parent: $group.closest("[data-json-editor-path]"),
+                                editedGroup: $group
+                            });
                             $group.after($editor);
                         }
                     }
@@ -895,36 +909,40 @@
             });
         };
 
-        /**
+        /*!
          * createNewFieldEditor
          * Returns a jQuery object containing a new field editor.
          *
          * @name createNewFieldEditor
          * @function
-         * @param {Boolean} newFields True if the new field editor will create
-         * new fields instead of editing existing fields, false otherwise.
-         * @param {Boolean} deletableFields Whether the fields created by this
+         * @param {Object} options An object containing the following
+         * properties:
+         *
+         * - `newFields` (Boolean): True if the new field editor will create new
+         * fields instead of editing existing fields, false otherwise.
+         * - `deletableFields` (Boolean): Whether the fields created by this
          * field editor will be deletable.
-         * @param {Boolean} editableFields Whether the fields created by this
+         * - `editableFields` (Boolean): Whether the fields created by this
          * field editor will be editable.
-         * @param {jQuery} [$parent] The jQuery element which is the direct
+         * - `parent` (jQuery): Optional. The jQuery element which is the direct
          * parent of all the group elements at the same level as the new field
          * editor destination in the UI and has the `data-json-editor-path`
          * attribute set to the correct path. If it is not set or it does not
          * have this attribute set, the `self.container` element and an empty
          * path string will be used.
-         * @param {jQuery} [$editedGroup] The jQuery element representing the
-         * field which is edited by the newly created field editor. It is
+         * - `editedGroup` (jQuery): Optional. The jQuery element representing
+         * the field which is edited by the newly created field editor. It is
          * required only when `newFields` is set to `false`.
+         *
          * @return {jQuery} The newly created field editor.
          */
-        self.createNewFieldEditor = function (newFields, deletableFields,
-                editableFields, $parent, $editedGroup) {
-            $parent = $parent && $parent.length > 0 ? $parent : self.container;
+         function createNewFieldEditor(options) {
+            var $parent = options.parent && options.parent.length > 0 ?
+                options.parent : self.container;
             var path = $parent.attr("data-json-editor-path") || "";
 
             var $div = $("<div>", {
-                class: "json-editor-" + (newFields ? "new" : "edit") +
+                class: "json-editor-" + (options.newFields ? "new" : "edit") +
                     "-field-form"
             });
 
@@ -1039,7 +1057,7 @@
 
             var $addFieldButton = $("<input>", {
                 type: "button",
-                value: (newFields ? "+ Add" : "💾 Save") + " field",
+                value: (options.newFields ? "+ Add" : "💾 Save") + " field",
                 class: "json-editor-add-field-button",
                 on: {
                     click: function () {
@@ -1073,8 +1091,8 @@
                             label: label,
                             type: type,
                             path: (path ? path + "." : "") + name,
-                            deletable: deletableFields,
-                            editable: editableFields,
+                            deletable: options.deletableFields,
+                            editable: options.editableFields,
                             data: getDefaultValueForType(type)
                         };
                         // If the possible values checkbox is enabled, add the
@@ -1094,7 +1112,7 @@
                         delete newSchemaWithoutData.data;
                         var sch = self.getSchemaAtPath(path).schema;
                         var order = sch[ORDER_PROPERTY];
-                        if (newFields) {
+                        if (options.newFields) {
                             order.push(name);
                         } else {
                             var oldName = self.getNameFromPath($editedInput
@@ -1112,8 +1130,8 @@
                         // edits an existing field), after the UI is created
                         // above, remove the field editor and the old field UI
                         // from the document.
-                        if (!newFields) {
-                            $editedGroup.remove();
+                        if (!options.newFields) {
+                            options.editedGroup.remove();
                             $div.remove();
                             return;
                         }
@@ -1136,10 +1154,11 @@
             // possible values from the old schema are inserted in it below.
             $typeSelect.trigger("change");
 
-            // If this condition is met, $editedGroup is a valid jQuery
+            // If this condition is met, `options.editedGroup` is a valid jQuery
             // element.
-            if (!newFields) {
-                var $editedInput = $editedGroup.find("[data-json-editor-path]");
+            if (!options.newFields) {
+                var $editedInput = options.editedGroup
+                    .find("[data-json-editor-path]");
                 var fieldPath = $editedInput.attr("data-json-editor-path");
                 var oldSchema = self.getSchemaAtPath(fieldPath);
 
@@ -1166,8 +1185,12 @@
             }
 
             var $label = $("<label>");
-            $div.append($("<form>").append($label.append($("<hr>"),
-                    $("<strong>").text((newFields ? "Add" : "Edit") + " field"),
+            if (!$parent.is("table")) {
+                $label.append($("<hr>"));
+            }
+            var formTitle = (options.newFields ? "Add" : "Edit") + " field";
+            $div.append($("<form>").append($label.append(
+                    $("<strong>").text(formTitle),
                     $("<br>"),
                     $("<label>").text("Name: ").append($nameInput),
                     $("<label>").text("Type: ").append($typeSelect),
@@ -1182,7 +1205,7 @@
                     $addFieldButton)));
 
             // If this is an editor for an existing field,
-            if (!newFields) {
+            if (!options.newFields) {
                 // also show a Cancel button.
                 $label.append($("<input>", {
                     type: "button",
@@ -1200,7 +1223,7 @@
             }
 
             return $div;
-        };
+        }
 
         /**
          * add
