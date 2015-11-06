@@ -452,6 +452,83 @@
             });
         }
 
+        /*!
+         * deleteColumn
+         * Deletes a column from an array table, the column being identified
+         * using the `$th` table column header argument which is a jQuery
+         * element.
+         *
+         * @name deleteColumn
+         * @function
+         * @param {jQuery} $th The header `<th>` of the column which should be
+         * deleted.
+         * @return {undefined}
+         */
+        function deleteColumn($th) {
+            // Get the table header row, the one which contains `$th`.
+            var $tr = $th.closest("tr");
+            // Get the index of the column which contains `$th`.
+            var i = $th.index();
+            // Get the table containing the `$th`.
+            var $table = $tr.closest("table");
+            // :nth-child selector uses 1-based indices. Select all the
+            // table cells with the index (i + 1) inside the parent
+            // rows, then remove them from the document.
+            $table.find("td:nth-child(" + (i + 1) + ")").remove();
+            // Also remove the column header `$th`.
+            $th.remove();
+
+            // Also remove the column (field) from the array schema so
+            // that the add new field button will work correctly, will
+            // not add the deleted field to the new array items.
+            var path = $table.attr("data-json-editor-path");
+            var name = $th.attr("data-json-editor-name");
+            var sch = self.getSchemaAtPath(path);
+            if (name.length > 0) {
+                delete sch.schema[name];
+                var order = sch.schema[ORDER_PROPERTY];
+                order.splice(order.indexOf(name), 1);
+            } else {
+                sch.schema = {};
+
+                // If the array schema contained a single field, add a
+                // new column with the delete item and add item buttons
+                // which existed only in the <td>s from the deleted
+                // column.
+                $table.find("tbody tr").each(function (i, e) {
+                    $(e).append($("<td>").append(
+                                createDeleteButton($table)));
+                });
+                $table.find("tfoot tr").each(function (i, e) {
+                    $(e).append($("<td>").append(
+                                createAddButton($table)));
+                });
+                // TODO: do the same when adding a new field to an array
+                // with a single field and do the reverse when adding a
+                // new field to an array with no fields.
+            }
+        }
+
+        /*!
+         * createDeleteFieldButton
+         * Returns a new delete field button to be inserted in a column header
+         * in a table with the `deletableFields` schema property set to `true`.
+         *
+         * @name createDeleteFieldButton
+         * @function
+         * @return {jQuery} The new delete field button.
+         */
+        function createDeleteFieldButton() {
+            return $("<input>", {
+                type: "button",
+                value: "× Delete field",
+                on: {
+                    click: function () {
+                        deleteColumn($(this).parent());
+                    }
+                }
+            });
+        }
         /**
          * createGroup
          * Creates a form group and returns the jQuery object.
@@ -549,50 +626,6 @@
                     $tbody = $("<tbody>")
                 ]);
 
-                function deleteColumn($th) {
-                    // Get the table header row, the one which contains `$th`.
-                    var $tr = $th.closest("tr");
-                    // Get the index of the column which contains `$th`.
-                    var i = $th.index();
-                    // Get the table containing the `$th`.
-                    var $table = $tr.closest("table");
-                    // :nth-child selector uses 1-based indices. Select all the
-                    // table cells with the index (i + 1) inside the parent
-                    // rows, then remove them from the document.
-                    $table.find("td:nth-child(" + (i + 1) + ")").remove();
-                    // Also remove the column header `$th`.
-                    $th.remove();
-
-                    // Also remove the column (field) from the array schema so
-                    // that the add new field button will work correctly, will
-                    // not add the deleted field to the new array items.
-                    var path = $table.attr("data-json-editor-path");
-                    var name = $th.attr("data-json-editor-name");
-                    var sch = self.getSchemaAtPath(path);
-                    if (name.length > 0) {
-                        delete sch.schema[name];
-                        var order = sch.schema[ORDER_PROPERTY];
-                        order.splice(order.indexOf(name), 1);
-                    } else {
-                        sch.schema = {};
-
-                        // If the array schema contained a single field, add a
-                        // new column with the delete item and add item buttons
-                        // which existed only in the <td>s from the deleted
-                        // column.
-                        $table.find("tbody tr").each(function (i, e) {
-                            $(e).append($("<td>").append(
-                                        createDeleteButton($table)));
-                        });
-                        $table.find("tfoot tr").each(function (i, e) {
-                            $(e).append($("<td>").append(
-                                        createAddButton($table)));
-                        });
-                        // TODO: do the same when adding a new field to an array
-                        // with a single field and do the reverse when adding a
-                        // new field to an array with no fields.
-                    }
-                }
 
                 $headers = $thead.children("tr");
                 var headers = [];
@@ -605,16 +638,7 @@
                         "data-json-editor-name": ""
                     });
                     if (field.deletableFields) {
-                        var $deleteFieldButton = $("<input>", {
-                            type: "button",
-                            value: "× Delete field",
-                            on: {
-                                click: function () {
-                                    deleteColumn($(this).parent());
-                                }
-                            }
-                        });
-                        $th.append($deleteFieldButton);
+                        $th.append(createDeleteFieldButton());
                     }
                     $ths.push($th);
                 } else {
@@ -628,16 +652,7 @@
                             "data-json-editor-name": c.name
                         });
                         if (field.deletableFields) {
-                            var $deleteFieldButton = $("<input>", {
-                                type: "button",
-                                value: "× Delete field",
-                                on: {
-                                    click: function () {
-                                        deleteColumn($(this).parent());
-                                    }
-                                }
-                            });
-                            $th.append($deleteFieldButton);
+                            $th.append(createDeleteFieldButton());
                         }
                         $ths.push($th);
                     }
