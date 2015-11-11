@@ -1203,7 +1203,7 @@
                                     // the label to the name "values" in some
                                     // cases, but we can do better, we set it to
                                     // "Values" if `sch` does not have a name
-                                    // set..
+                                    // set.
                                     sch[nameOfTheSingleOldField].label =
                                         sch.name || "Values";
 
