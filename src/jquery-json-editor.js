@@ -484,10 +484,56 @@
             var path = $table.attr("data-json-editor-path");
             var name = $th.attr("data-json-editor-name");
             var def = self.getDefinitionAtPath(path);
+            // If there is only a single column in the table, its `<th>` will
+            // have the `data-json-editor-name` attribute set to an empty
+            // string.
             if (name.length > 0) {
                 delete def.schema[name];
                 var order = def.schema[ORDER_PROPERTY];
                 order.splice(order.indexOf(name), 1);
+                // If there remains just one column after removing the selected
+                // column, move the add/delete item buttons inside the single
+                // column, and change the attributes of the rows and of the
+                // inputs in the rows so that the `getData` method will not
+                // return an array of objects with a single property but an
+                // array of elementary objects (strings, numbers, dates etc.).
+                // Also update the definition of the array to have its only
+                // field's schema directly in the `schema` property.
+                if (order.length === 1) {
+                    $table.find("tbody > tr").each(function (i, e) {
+                        $(e).children("td:last").remove();
+                    });
+                    $table.find("tfoot > tr").each(function (i, e) {
+                        $(e).children("td:last").remove();
+                    });
+                    addControlsToLastColumn($table);
+
+                    // Update the UI (the table rows in the table body) to
+                    // represent the new schema.
+                    $table.find("tbody > tr").each(function (i, e) {
+                        var $e = $(e);
+                        $e.removeAttr("data-json-editor-path");
+                        $e.removeAttr("data-json-editor-type");
+                        $e.find("[data-json-editor-path]")
+                                .each(function (ii, ee) {
+                            var $ee = $(ee);
+                            var p = $ee
+                                .attr("data-json-editor-path");
+                            $ee.attr("data-json-editor-path", path + "." + i);
+                        });
+                    });
+                    // Also update the row in the table footer.
+                    var $tfootRow = $table.find("tfoot > tr");
+                    $tfootRow.removeAttr("data-json-editor-path");
+                    $tfootRow.removeAttr("data-json-editor-type");
+                    var $tfootInput = $tfootRow.find("[data-json-editor-path]");
+                    $tfootInput.attr("data-json-editor-path", path + ".+");
+                    // Also update the row in the table header.
+                    $table.find("thead:first > tr:first > th:first")
+                        .attr("data-json-editor-name", "");
+
+                    def.schema = def.schema[order[0]];
+                }
             } else {
                 def.schema = {};
                 addColumnWithControls($table);
@@ -512,17 +558,38 @@
             // the <td>s from the deleted column (or, when adding a new column
             // to a table with a single column, which existed only in the old
             // single column).
-            $table.find("tbody tr").each(function (i, e) {
+            $table.find("tbody > tr").each(function (i, e) {
                 $(e).append($("<td>").append(
                             createDeleteButton($table)));
             });
-            $table.find("tfoot tr").each(function (i, e) {
+            $table.find("tfoot > tr").each(function (i, e) {
                 $(e).append($("<td>").append(
                             createAddButton($table)));
             });
             // TODO: do the same when adding a new field to an array with a
             // single field and do the reverse when adding a new field to an
             // array with no fields.
+        }
+
+        /*!
+         * addControlsToLastColumn
+         * Adds in the last column of the specified jQuery table element
+         * controls with an add new item control in the `<tfoot>` row and with
+         * delete item controls in each of the rows in the `<tbody>`.
+         *
+         * @name addControlsToLastColumn
+         * @function
+         * @param {jQuery} $table The table jQuery element to which to add the
+         * controls.
+         * @return {undefined}
+         */
+        function addControlsToLastColumn($table) {
+            $table.find("tbody > tr > td:last-child").each(function (i, e) {
+                $(e).append(createDeleteButton($table));
+            });
+            $table.find("tfoot > tr:first > td:last").each(function (i, e) {
+                $(e).append(createAddButton($table));
+            });
         }
 
         /*!
