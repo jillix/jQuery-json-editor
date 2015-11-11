@@ -371,6 +371,11 @@
      *  `data`.
      *  - `autoInit` (Boolean): If `true`, the forms will be added by default
      *  (default: `true`).
+     *  - `defaultArrayFieldName` (String): The name that a single field in an
+     *  array will take when adding a second field to the array. The default is
+     *  "values".
+     *  - `defaultArrayFieldLabel` (String): The label that a single field in an
+     *  array will take. The default is "Values".
      *
      * @return {Object} The JSON editor object containing:
      *
@@ -387,7 +392,9 @@
         var settings = $.extend({
             data: {},
             schema: {},
-            autoInit: true
+            autoInit: true,
+            defaultArrayFieldName: "values",
+            defaultArrayFieldLabel: "Values"
         }, opt_options);
 
         // JSON Editor object
@@ -625,7 +632,7 @@
          */
         function createColumnHeader(sch) {
             var $th = $("<th>", {
-                text: sch.label || "Values",
+                text: sch.label || settings.defaultArrayFieldLabel,
                 "data-json-editor-name": sch.name || ""
             });
             if (sch.deletable) {
@@ -1163,7 +1170,8 @@
                 var sch = self.getDefinitionAtPath(path).schema;
                 // If the schema `sch` contains a single field
                 if (typeof sch.type === "string") {
-                    return name === (sch.name || "values");
+                    return name === (sch.name ||
+                            settings.defaultArrayFieldName);
                 }
                 // else if `sch` contains multiple fields
                 return sch[ORDER_PROPERTY].indexOf(name) > -1;
@@ -1267,7 +1275,7 @@
                                     // schema which also contains the newly created
                                     // field.
                                     var nameOfTheSingleOldField = sch.name ||
-                                        "values";
+                                        settings.defaultArrayFieldName;
                                     definition.schema = {};
                                     definition.schema[ORDER_PROPERTY] =
                                         [nameOfTheSingleOldField, name];
@@ -1276,14 +1284,17 @@
                                     definition.schema[name] = newSchema;
                                     sch = definition.schema;
 
-                                    schemaCoreFields(sch, definition.path + ".");
+                                    schemaCoreFields(sch, definition.path +
+                                            ".");
                                     // The call to `schemaCoreFields` also sets
-                                    // the label to the name "values" in some
+                                    // the label to the name
+                                    // `settings.defaultArrayFieldName` in some
                                     // cases, but we can do better, we set it to
-                                    // "Values" if `sch` does not have a name
-                                    // set.
+                                    // `settings.defaultArrayFieldLabel` if
+                                    // `sch` does not have a name set.
                                     sch[nameOfTheSingleOldField].label =
-                                        sch.name || "Values";
+                                        sch.name ||
+                                        settings.defaultArrayFieldLabel;
 
                                     // Update the UI (the table rows in the
                                     // table body) to represent the new schema.
