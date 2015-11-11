@@ -1150,12 +1150,23 @@
              * otherwise.
              */
             function nameAlreadyExists(name) {
-                // Obtain the data at the path where the new field is created.
-                var data = self.getData(path, $parent);
+                // If the field editor is not in a table (or, with other words,
+                // it is in an object).
+                if (!$parent.is("table")) {
+                    // Obtain the data at the path where the new field is created.
+                    var data = self.getData(path, $parent);
 
-                // Return true if the given name is already in the data,
-                // otherwise return false.
-                return Object.keys(data).indexOf(name) > -1;
+                    // Return true if the given name is already in the data,
+                    // otherwise return false.
+                    return Object.keys(data).indexOf(name) > -1;
+                }
+                var sch = self.getDefinitionAtPath(path).schema;
+                // If the schema `sch` contains a single field
+                if (typeof sch.type === "string") {
+                    return name === (sch.name || "values");
+                }
+                // else if `sch` contains multiple fields
+                return sch[ORDER_PROPERTY].indexOf(name) > -1;
             }
 
             var $addFieldButton = $("<input>", {
