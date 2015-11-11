@@ -9,19 +9,6 @@
 (function ($) {
 
     /*!
-     * ORDER_PROPERTY
-     * Contains the name of the property in the schemas which contains the
-     * order in which the fields from the schemas should be laid down in the
-     * user interface.
-     *
-     * @name ORDER_PROPERTY
-     * @constant
-     * @type {String}
-     * @default
-     */
-    var ORDER_PROPERTY = "_order";
-
-    /*!
      * findValue
      * Finds a value in parent (object) using the dot notation passed in dotNot.
      *
@@ -254,49 +241,6 @@
     }
 
     /*!
-     * schemaCoreFields
-     * Sets the core fields in schema.
-     *
-     * @name schemaCoreFields
-     * @function
-     * @param {Object} obj The current field object.
-     * @param {String} path The path to the field value.
-     * @return {undefined}
-     */
-    function schemaCoreFields(obj, path) {
-        path = path || "";
-        for (var k in obj) {
-            if (!obj.hasOwnProperty(k) || k === ORDER_PROPERTY) continue;
-
-            var c = obj[k];
-            var _schemaContainsMoreFields = schemaContainsMoreFields(c);
-            // If the schema contains more fields
-            if (_schemaContainsMoreFields) {
-                // recursively process them
-                schemaCoreFields(c.schema, path + k + ".");
-
-            // If the type is not specified but a non-empty array of
-            // possible values is specified
-            } else if (!c.type && c.possible) {
-                // set the type obtained by analyzing the first possible value
-                c.type = getTypeOf(c.possible[0]);
-            }
-            c.label = c.label || k;
-            c.path = path + k;
-            c.name = k;
-
-            // If the `c` schema contains more fields and it does not have the
-            // order of its fields specified,
-            if (_schemaContainsMoreFields &&
-                    !Array.isArray(Object(c.schema)[ORDER_PROPERTY])) {
-                c.schema = c.schema || {};
-                // Generate the default order of its fields using Object.keys.
-                c.schema[ORDER_PROPERTY] = Object.keys(c.schema);
-            }
-        }
-    }
-
-    /*!
      * getTypeOf
      * Returns the type of input variable.
      *
@@ -376,6 +320,9 @@
      *  "values".
      *  - `defaultArrayFieldLabel` (String): The label that a single field in an
      *  array will take. The default is "Values".
+     *  - `orderProperty` (String): Contains the name of the property in the
+     *  schemas which contains the order in which the fields from the schemas
+     *  should be laid down in the user interface. Default value: "_order".
      *
      * @return {Object} The JSON editor object containing:
      *
@@ -394,7 +341,8 @@
             schema: {},
             autoInit: true,
             defaultArrayFieldName: "values",
-            defaultArrayFieldLabel: "Values"
+            defaultArrayFieldLabel: "Values",
+            orderProperty: "_order"
         }, opt_options);
 
         // JSON Editor object
@@ -409,6 +357,49 @@
             // Data manipulation
             converters: $.extend(JsonEdit.converters, opt_options.converters),
         };
+
+        /*!
+         * schemaCoreFields
+         * Sets the core fields in schema.
+         *
+         * @name schemaCoreFields
+         * @function
+         * @param {Object} obj The current field object.
+         * @param {String} path The path to the field value.
+         * @return {undefined}
+         */
+        function schemaCoreFields(obj, path) {
+            path = path || "";
+            for (var k in obj) {
+                if (!obj.hasOwnProperty(k) || k === settings.orderProperty) continue;
+
+                var c = obj[k];
+                var _schemaContainsMoreFields = schemaContainsMoreFields(c);
+                // If the schema contains more fields
+                if (_schemaContainsMoreFields) {
+                    // recursively process them
+                    schemaCoreFields(c.schema, path + k + ".");
+
+                // If the type is not specified but a non-empty array of
+                // possible values is specified
+                } else if (!c.type && c.possible) {
+                    // set the type obtained by analyzing the first possible value
+                    c.type = getTypeOf(c.possible[0]);
+                }
+                c.label = c.label || k;
+                c.path = path + k;
+                c.name = k;
+
+                // If the `c` schema contains more fields and it does not have the
+                // order of its fields specified,
+                if (_schemaContainsMoreFields &&
+                        !Array.isArray(Object(c.schema)[settings.orderProperty])) {
+                    c.schema = c.schema || {};
+                    // Generate the default order of its fields using Object.keys.
+                    c.schema[settings.orderProperty] = Object.keys(c.schema);
+                }
+            }
+        }
 
         /*!
          * createAddButton
@@ -496,7 +487,7 @@
             // string.
             if (name.length > 0) {
                 delete def.schema[name];
-                var order = def.schema[ORDER_PROPERTY];
+                var order = def.schema[settings.orderProperty];
                 order.splice(order.indexOf(name), 1);
                 // If there remains just one column after removing the selected
                 // column, move the add/delete item buttons inside the single
@@ -753,7 +744,7 @@
                     var $th = createColumnHeader(sch);
                     $ths.push($th);
                 } else {
-                    var order = field.schema[ORDER_PROPERTY];
+                    var order = field.schema[settings.orderProperty];
                     for (var i = 0; i < order.length; i++) {
                         var k = order[i];
                         var sch = field.schema[k];
@@ -827,7 +818,7 @@
                 });
 
                 $input = [];
-                var order = field.schema[ORDER_PROPERTY];
+                var order = field.schema[settings.orderProperty];
                 for (var i = 0; i < order.length; i++) {
                     var k = order[i];
                     var cField = field.schema[k];
@@ -883,7 +874,7 @@
                             // `field.path`.
                             var sch = self.getDefinitionAtPath(field.path
                                     .split(".").slice(0, -1).join(".")).schema;
-                            var order = sch[ORDER_PROPERTY];
+                            var order = sch[settings.orderProperty];
                             order.splice(order.indexOf(field.name), 1);
                             delete sch[field.name];
                         }
@@ -1174,7 +1165,7 @@
                             settings.defaultArrayFieldName);
                 }
                 // else if `sch` contains multiple fields
-                return sch[ORDER_PROPERTY].indexOf(name) > -1;
+                return sch[settings.orderProperty].indexOf(name) > -1;
             }
 
             var $addFieldButton = $("<input>", {
@@ -1277,7 +1268,7 @@
                                     var nameOfTheSingleOldField = sch.name ||
                                         settings.defaultArrayFieldName;
                                     definition.schema = {};
-                                    definition.schema[ORDER_PROPERTY] =
+                                    definition.schema[settings.orderProperty] =
                                         [nameOfTheSingleOldField, name];
                                     definition.schema[nameOfTheSingleOldField] =
                                         sch;
@@ -1353,7 +1344,7 @@
                                 // fields.
                                 if (options.newFields) {
                                     // First update the schema.
-                                    sch[ORDER_PROPERTY].push(name);
+                                    sch[settings.orderProperty].push(name);
                                     sch[name] = newSchema;
 
                                     addNewColumn($parent, newSchema);
@@ -1370,7 +1361,7 @@
                             // schema without the (default) data.
                             var newSchemaWithoutData = $.extend(true, {}, newSchema);
                             delete newSchemaWithoutData.data;
-                            var order = sch[ORDER_PROPERTY];
+                            var order = sch[settings.orderProperty];
                             // if a new field is created
                             if (options.newFields) {
                                 order.push(name);
@@ -1540,7 +1531,7 @@
 
                 // An array with the names of all the fields directly in this
                 // schema
-                var order = fieldSchema.schema[ORDER_PROPERTY];
+                var order = fieldSchema.schema[settings.orderProperty];
 
                 var fields = []; // Field names
                 for (var i = 0; i < order.length; i++) {
@@ -1674,7 +1665,7 @@
         self.initUi = function () {
 
             function create(obj) {
-                var order = obj[ORDER_PROPERTY];
+                var order = obj[settings.orderProperty];
                 for (var i = 0; i < order.length; i++) {
                     var c = obj[order[i]];
                     self.container.append(self.createGroup(c));
