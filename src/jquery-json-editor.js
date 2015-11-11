@@ -1159,6 +1159,10 @@
                     return Object.keys(data).indexOf(name) > -1;
                 }
                 var sch = self.getDefinitionAtPath(path).schema;
+                // Handle empty schemas (arrays without any fields).
+                if ($.isEmptyObject(sch)) {
+                    return false;
+                }
                 // If the schema `sch` contains a single field
                 if (typeof sch.type === "string") {
                     return name === (sch.name ||
@@ -1229,8 +1233,19 @@
                         if (inTable) {
                             function createNewCellEditor(indexString) {
                                 var path2, sch2;
-                                path2 = (path ? path + "." : "") + indexString +
-                                    "." + name;
+                                path2 = (path ? path + "." : "") + indexString;
+                                // From the 3 possibilities: no field, one field
+                                // or many fields in the schema of the array
+                                // before the addition of the new column, the
+                                // name should be added to the path only when
+                                // the schema already contains one or more
+                                // fields. When it does not contain any fields,
+                                // the new field will be alone and its data will
+                                // be accessed directly from the only input in
+                                // that row.
+                                if (!$.isEmptyObject(sch)) {
+                                    path2 += "." + name;
+                                }
                                 sch2 = $.extend(true, {}, newSchema, {
                                     path: path2
                                 });
@@ -1244,8 +1259,8 @@
                                 // Create and show the UI for the new column in
                                 // the table. First add a table column header
                                 // then add empty inputs under it.
-                                $table.find("thead tr th:last").before(
-                                        createColumnHeader(newSchema));
+                                $table.find("thead > tr:first > th:last")
+                                    .before(createColumnHeader(newSchema));
                                 var $trs = $table.find("tbody > tr");
                                 for (var i = 0; i < $trs.length; i++) {
                                     $trs.eq(i).children("td").eq(-1).before(
@@ -1256,8 +1271,8 @@
                                         createNewCellEditor("+"));
                             }
 
-                            // If the schema is not an object with multiple fields,
-                            // but a single field,
+                            // If the schema is not an object with multiple
+                            // fields or an empty object, but a single field,
                             if (typeof sch.type === "string") {
                                 // and if the current field editor just creates new
                                 // fields (so it does not edit existing fields),
@@ -1338,8 +1353,25 @@
                                     // TODO: The only field in the table is being
                                     // edited. Not yet implemented.
                                 }
-                            // else if the schema is an object with multiple fields
+                            // else if the schema is an empty object (they array
+                            // has no fields)
+                            } else if ($.isEmptyObject(sch)) {
+                                // A new field/column is added to a table
+                                // without fields/columns.
+                                if (options.newFields) {
+                                    // First update the schema.
+                                    definition.schema = newSchema;
+
+                                    addNewColumn($parent, newSchema);
+                                // Else an existing field/column is edited in a
+                                // table without fields/columns.
+                                } else {
+                                    alert("Impossible situation: trying to " +
+                                            "edit a field in an array " +
+                                            "without fields.");
+                                }
                             } else {
+                            // else if the schema is an object with multiple fields
                                 // A new field is added to a table with multiple
                                 // fields.
                                 if (options.newFields) {
