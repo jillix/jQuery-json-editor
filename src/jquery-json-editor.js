@@ -417,9 +417,18 @@
                 on: {
                     click: function () {
                         var path = $table.attr("data-json-editor-path");
-                        self.add($table, self.getData(path + ".+", $table,
-                                    true));
-                        self.setData(path + ".+", {});
+                        var data = self.getData(path + ".+", $table, true);
+                        self.add($table, data);
+
+                        // We use `undefined` when the data is an elementary
+                        // object, and an empty object when it is an object with
+                        // properties.
+                        if (Object.getOwnPropertyNames(data).length === 0) {
+                            data = undefined;
+                        } else {
+                            data = {};
+                        }
+                        self.setData(path + ".+", data);
                     }
                 },
                 "data-json-editor-control": "add"
@@ -448,6 +457,27 @@
                     }
                 }
             });
+        }
+
+        /*!
+         * deleteControlsColumn
+         * Deletes the column at the end of `$table` with the add/delete buttons
+         * and adds those buttons in the last remaining column in the table.
+         *
+         * @name deleteControlsColumn
+         * @function
+         * @param {jQuery} $table The jQuery element of the table representaton
+         * of the array in which the controls column is deleted.
+         * @return {undefined}
+         */
+        function deleteControlsColumn($table) {
+            $table.find("tbody > tr").each(function (i, e) {
+                $(e).children("td:last").remove();
+            });
+            $table.find("tfoot > tr").each(function (i, e) {
+                $(e).children("td:last").remove();
+            });
+            addControlsToLastColumn($table);
         }
 
         /*!
@@ -491,20 +521,15 @@
                 order.splice(order.indexOf(name), 1);
                 // If there remains just one column after removing the selected
                 // column, move the add/delete item buttons inside the single
-                // column, and change the attributes of the rows and of the
-                // inputs in the rows so that the `getData` method will not
+                // column, set an empty `data-json-editor-name` attribute to the
+                // column header and change the attributes of the rows and of
+                // the inputs in the rows so that the `getData` method will not
                 // return an array of objects with a single property but an
                 // array of elementary objects (strings, numbers, dates etc.).
                 // Also update the definition of the array to have its only
                 // field's schema directly in the `schema` property.
                 if (order.length === 1) {
-                    $table.find("tbody > tr").each(function (i, e) {
-                        $(e).children("td:last").remove();
-                    });
-                    $table.find("tfoot > tr").each(function (i, e) {
-                        $(e).children("td:last").remove();
-                    });
-                    addControlsToLastColumn($table);
+                    deleteControlsColumn($table);
 
                     // Update the UI (the table rows in the table body) to
                     // represent the new schema.
@@ -564,9 +589,6 @@
                 $(e).append($("<td>").append(
                             createAddButton($table)));
             });
-            // TODO: do the same when adding a new field to an array with a
-            // single field and do the reverse when adding a new field to an
-            // array with no fields.
         }
 
         /*!
@@ -613,20 +635,21 @@
 
         /*!
          * createColumnHeader
-         * Returns a new `<th>` for the specified schema which will be inserted
-         * in the table as a column header.
+         * Returns a new `<th>` for the specified field definition which will be
+         * inserted in the table as a column header.
          *
          * @name createColumnHeader
          * @function
-         * @param {Object} The schema for which to generate the column header.
+         * @param {Object} def The field definition for which to generate the
+         * column header.
          * @return {jQuery} The column header which is a `<th>` element.
          */
-        function createColumnHeader(sch) {
+        function createColumnHeader(def) {
             var $th = $("<th>", {
-                text: sch.label || settings.defaultArrayFieldLabel,
-                "data-json-editor-name": sch.name || ""
+                text: def.label || settings.defaultArrayFieldLabel,
+                "data-json-editor-name": def.name || ""
             });
-            if (sch.deletable) {
+            if (def.deletable) {
                 $th.append(createDeleteFieldButton());
             }
             return $th;
@@ -1255,20 +1278,49 @@
                                 return $("<td>").append(self.createGroup(sch2));
                             }
 
-                            function addNewColumn($table, newSchema) {
-                                // Create and show the UI for the new column in
-                                // the table. First add a table column header
-                                // then add empty inputs under it.
+                            /*!
+                             * addNewColumn
+                             * Creates and shows the UI for the new column in
+                             * the table. First adds a table column header then
+                             * adds empty inputs under it.
+                             *
+                             * @name addNewColumn
+                             * @function
+                             * @param {jQuery} $table The table element in which
+                             * to add the new column.
+                             * @param {Object} newDef The field definition of
+                             * the new column.
+                             */
+                            function addNewColumn($table, newDef) {
+                                // First add the column header.
                                 $table.find("thead > tr:first > th:last")
-                                    .before(createColumnHeader(newSchema));
+                                    .before(createColumnHeader(newDef));
                                 var $trs = $table.find("tbody > tr");
+                                var $tds, $cellEditor;
+                                // For each row in the table body.
                                 for (var i = 0; i < $trs.length; i++) {
-                                    $trs.eq(i).children("td").eq(-1).before(
-                                            createNewCellEditor(i.toString()));
+                                    var $tr = $trs.eq(i);
+                                    // Create a new cell editor.
+                                    $cellEditor = createNewCellEditor(i.toString());
+                                    $tds = $tr.children("td");
+                                    // If there are cells in the row, put the
+                                    // cell editor before the last cell.
+                                    if ($tds.length > 0) {
+                                        $tds.eq(-1).before($cellEditor);
+                                    // Else append the cell editor to the row.
+                                    } else {
+                                        $tr.append($cellEditor);
+                                    }
                                 }
+                                // Do the same for the table footer row.
                                 var $tfootRow = $table.find("tfoot > tr:first");
-                                $tfootRow.children("td").eq(-1).before(
-                                        createNewCellEditor("+"));
+                                $tds = $tfootRow.children("td");
+                                $cellEditor = createNewCellEditor("+");
+                                if ($tds.length > 0) {
+                                    $tds.eq(-1).before($cellEditor);
+                                } else {
+                                    $tfootRow.append($cellEditor);
+                                }
                             }
 
                             // If the schema is not an object with multiple
@@ -1362,7 +1414,23 @@
                                     // First update the schema.
                                     definition.schema = newSchema;
 
-                                    addNewColumn($parent, newSchema);
+                                    // The new column should not have the
+                                    // attribute `data-json-editor-name` set in
+                                    // the column header, so we clone the schema
+                                    // object and remove the name and path
+                                    // properties from it.
+                                    var def = $.extend(true, {}, newSchema);
+                                    delete def.name;
+                                    delete def.path;
+
+                                    // Add the new column before deleting the
+                                    // controls column because
+                                    // `deleteControlsColumn` puts the controls
+                                    // in the last column after removing the
+                                    // controls column, and that last column
+                                    // exists only after calling `addNewColumn`.
+                                    addNewColumn($parent, def);
+                                    deleteControlsColumn($parent);
                                 // Else an existing field/column is edited in a
                                 // table without fields/columns.
                                 } else {
@@ -1370,8 +1438,8 @@
                                             "edit a field in an array " +
                                             "without fields.");
                                 }
-                            } else {
                             // else if the schema is an object with multiple fields
+                            } else {
                                 // A new field is added to a table with multiple
                                 // fields.
                                 if (options.newFields) {
