@@ -1060,7 +1060,7 @@
          *
          * @return {jQuery} The newly created field editor.
          */
-         function createNewFieldEditor(options) {
+        function createNewFieldEditor(options) {
             var $parent = options.parent && options.parent.length > 0 ?
                 options.parent : self.container;
             var path = $parent.attr("data-json-editor-path") || "";
