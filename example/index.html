@@ -70,6 +70,8 @@ a = {
         },
         student: { label: "Student" },
         hobbies: { label: "Hobbies",
+            addField: true,
+            deletableFields: true,
             schema: {
                 possible: [
                     "piano",
@@ -83,6 +85,8 @@ a = {
         born: { label: "Born Date" },
         keyboards: {
             label: "Keyboards",
+            addField: true,
+            deletableFields: true,
             schema: {
                 _order: ["manufacturer", "_type", "pianoKeys", "digital"],
                 manufacturer: { label: "Manufacturer" },
