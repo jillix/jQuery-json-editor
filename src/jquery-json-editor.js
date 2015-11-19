@@ -1254,6 +1254,8 @@
                 return sch[settings.orderProperty].indexOf(name) > -1;
             }
 
+            var $editedInput;
+
             var $addFieldButton = $("<input>", {
                 type: "button",
                 value: (options.newFields ? "+ Add" : "💾 Save") + " field",
@@ -1310,7 +1312,7 @@
                                 // If the array currently has a single field
                                 if (typeof sch.type === "string") {
                                     // If a new field is created
-                                    if (options.newField) {
+                                    if (options.newFields) {
                                         // TODO: Not yet implemented.
                                     // else if an existing field is edited
                                     } else {
@@ -1319,7 +1321,7 @@
                                 // If the array currently has no fields
                                 } else if ($.isEmptyObject(sch)) {
                                     // If a new field is created
-                                    if (options.newField) {
+                                    if (options.newFields) {
                                         // TODO: Not yet implemented.
                                     // else if an existing field is edited
                                     } else {
@@ -1330,7 +1332,7 @@
                                 // fields
                                 } else {
                                     // If a new field is created
-                                    if (options.newField) {
+                                    if (options.newFields) {
                                         // TODO: Not yet implemented.
                                     // else if an existing field is edited
                                     } else {
@@ -1341,7 +1343,7 @@
                             } else { // !inTable
                                 var order = sch[settings.orderProperty];
                                 // If a new field is created
-                                if (options.newField) {
+                                if (options.newFields) {
                                     // A new field of type object is added to an
                                     // object.
                                     order.push(name);
@@ -1647,7 +1649,6 @@
                 // jQuery element with that attribute set.
                 var isObject = typeof options.editedGroup
                     .attr("data-json-editor-path") !== "undefined";
-                var $editedInput;
                 if (isObject) {
                     $editedInput = options.editedGroup;
                 } else {
