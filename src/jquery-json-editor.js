@@ -668,6 +668,55 @@
             return $th;
         }
 
+        /*!
+         * inheritField
+         * A function that inherits a few properties from the parent field (of
+         * type "object", and in the future maybe also "array") into the child
+         * field.
+         *
+         * @name inheritField
+         * @function
+         * @param {Object} targetDef The child field that will receive some
+         * properties from the parent field.
+         * @param {Object} sourceDef The parent field from which some properties
+         * will be inherited.
+         * @return {undefined}
+         */
+        function inheritField(targetDef, sourceDef) {
+            /*!
+             * A small function that returns the second argument if the first
+             * argument is undefined, else it returns the first argument.
+             */
+            function f(a, b) {
+                if (typeof a === "undefined") {
+                    return b;
+                }
+                return a;
+            }
+
+            if (targetDef.type === "object") {
+                // If the parent object `sourceDef` of the field `targetDef` of
+                // type "object" has the `deletableFields` flag set, mark the
+                // field as `deletableFields`, only if `targetDef` does not
+                // already contain the `deletableFields` property.  The same
+                // goes for the `editableFields` and `addField` properties.
+                targetDef.deletableFields =
+                    f(targetDef.deletableFields, sourceDef.deletableFields);
+                targetDef.editableFields =
+                    f(targetDef.editableFields, sourceDef.editableFields);
+                targetDef.addField = f(targetDef.addField,
+                        sourceDef.addField);
+            }
+            // If the parent object `sourceDef` of the field `targetDef` has the
+            // `deletableFields` flag set, mark the field as `deletable`, only
+            // if `targetDef` does not already contain the `deletable` property.
+            // The same goes for `editableFields` and `editable`.
+            targetDef.deletable = f(targetDef.deletable,
+                    sourceDef.deletableFields);
+            targetDef.editable = f(targetDef.editable,
+                    sourceDef.editableFields);
+        }
+
         /**
          * createGroup
          * Creates a form group and returns the jQuery object.
@@ -859,12 +908,14 @@
                 for (var i = 0; i < order.length; i++) {
                     var k = order[i];
                     var cField = field.schema[k];
-                    $input.push(self.createGroup($.extend(true, {}, cField, {
+                    var fieldDef = $.extend(true, {}, cField, {
                         path: field.path + "." + k,
-                        _edit: field.edit,
-                        deletable: field.deletableFields,
-                        editable: field.editableFields
-                    })));
+                        _edit: field.edit
+                    });
+
+                    inheritField(fieldDef, field);
+
+                    $input.push(self.createGroup(fieldDef));
                 }
 
                 if (field.addField) {
@@ -1292,6 +1343,13 @@
                             type: type,
                             path: (path ? path + "." : "") + name
                         };
+                        inheritField(newSchema, {
+                            addField: options.addFields,
+                            deletableFields: options.deletableFields,
+                            editableFields: options.editableFields,
+                            deletable: options.deletableFields,
+                            editable: options.editableFields
+                        });
                         // Get the schema of the array/object field definition
                         // that is the parent of the new/edited field.
                         var definition = self.getDefinitionAtPath(path);
@@ -1299,12 +1357,7 @@
                         // The type can be "object" or an elementary type
                         // (string, date etc.).
                         if (type === "object") {
-                            $.extend(true, newSchema, {
-                                addFields: true,
-                                deletableFields: options.deletableFields,
-                                editableFields: options.editableFields,
-                                schema: {}
-                            });
+                            newSchema.schema = {};
                             newSchema.schema[settings.orderProperty] = [];
 
                             // If the field editor is inside a table
@@ -1364,11 +1417,7 @@
                                 $div.before(self.createGroup(newSchema));
                             }
                         } else {
-                            $.extend(true, newSchema, {
-                                deletable: options.deletableFields,
-                                editable: options.editableFields,
-                                data: getDefaultValueForType(type)
-                            });
+                            newSchema.data = getDefaultValueForType(type);
 
                             // If the possible values checkbox is enabled, add the
                             // entered possible values to the schema.
