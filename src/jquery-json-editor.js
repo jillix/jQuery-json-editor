@@ -676,10 +676,10 @@
          *
          * @name inheritField
          * @function
-         * @param {Object} targetDef The child field that will receive some
-         * properties from the parent field.
-         * @param {Object} sourceDef The parent field from which some properties
-         * will be inherited.
+         * @param {Object} targetDef The child field definition that will
+         * receive some properties from the parent field definition.
+         * @param {Object} sourceDef The parent field definition from which some
+         * properties will be inherited.
          * @return {undefined}
          */
         function inheritField(targetDef, sourceDef) {
@@ -1405,6 +1405,9 @@
                                     // A new field of type object is added to an
                                     // object.
                                     order.push(name);
+                                    // Insert the new schema in the
+                                    // `settings.schema` variable.
+                                    sch[name] = newSchema;
                                 // else if an existing field is edited
                                 } else {
                                     // A field of type object or other type is
@@ -1412,10 +1415,27 @@
                                     // The field is inside an object.
                                     var oldName = self.getNameFromPath($editedInput
                                             .attr("data-json-editor-path"));
-                                    delete sch[oldName];
-                                    order[order.indexOf(oldName)] = name;
+                                    // Keep the schema of the old field
+                                    // definition (the fields in the object) in
+                                    // the new field definition because the
+                                    // field of type "object" is just edited
+                                    // (this means that only its name/path and
+                                    // label could be changed, not the fields in
+                                    // it).
+                                    newSchema.schema = sch[oldName].schema;
+                                    // Insert the new schema in the
+                                    // `settings.schema` variable.
+                                    sch[name] = newSchema;
+                                    // If the name (so also the path) of the
+                                    // field has been changed, replace the old
+                                    // name with the new name in the order array
+                                    // and delete the old field definition with
+                                    // the old name from the schema.
+                                    if (name !== oldName) {
+                                        order[order.indexOf(oldName)] = name;
+                                        delete sch[oldName];
+                                    }
                                 }
-                                sch[name] = newSchema;
 
                                 // Create and show the UI for the schema and add it
                                 // before the field editor.
