@@ -49,12 +49,22 @@ a = {
         editableObjectWithPossibleAnswers: {
             "random number": 3,
             "another field with editable name": "value"
+        },
+        deepObject: {
+            test: "Testing",
+            subobject: {
+                test2: "Testing 2",
+                subsubobject: {
+                    test3: "Testing 3"
+                }
+            }
         }
     },
     schema: { // the types are inferred from the data above
         _order: ["age", "country", "name", "student", "hobbies", "born",
             "keyboards", "editableObject", "preferredMusicGenre",
-            "editableObjectWithPossibleAnswers", "dateFieldWithPossibleValues"],
+            "editableObjectWithPossibleAnswers", "dateFieldWithPossibleValues",
+            "deepObject"],
         age: { label: "Age", type: "number" },
         country: { label: "Country" },
         name: {
@@ -128,6 +138,30 @@ a = {
                 new Date(2012, 1, 10),
                 new Date(2011, 10, 11)
             ]
+        },
+        deepObject: {
+            label: "Deep object",
+            addField: true,
+            deletableFields: true,
+            editableFields: true,
+            schema: {
+                _order: ["test", "subobject"],
+                test: { label: "Test" },
+                subobject: {
+                    label: "Sub-object",
+                    schema: {
+                        _order: ["test2", "subsubobject"],
+                        test2: { label: "Test 2" },
+                        subsubobject: {
+                            label: "Sub-sub-object",
+                            schema: {
+                                _order: ["test3"],
+                                test3: { label: "Test 3" },
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }</textarea>
