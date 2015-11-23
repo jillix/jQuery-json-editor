@@ -977,14 +977,18 @@
                     on: {
                         click: function () {
                             // This class, `json-editor-edited`, indicates that
-                            // the field is being edited (with an editor
-                            // created with the `createNewFieldEditor` function)
-                            // and is used in the `getData` and in the
+                            // the field is being edited (with an editor created
+                            // with the `createNewFieldEditor` function) and is
+                            // used in the `getData` and indirectly in the
                             // `nameAlreadyExists` functions to exclude the
                             // edited field from the data and from the list of
                             // duplicate names.
-                            $group.find("[data-json-editor-path]")
-                                .addClass("json-editor-edited");
+                            if ($group.is("[data-json-editor-path]")) {
+                                $group.addClass("json-editor-edited");
+                            } else {
+                                $group.find("[data-json-editor-path]")
+                                    .addClass("json-editor-edited");
+                            }
                             var $editor = createNewFieldEditor({
                                 newFields: false,
                                 // It is possible that this field editor will
@@ -1284,7 +1288,8 @@
                 // If the field editor is not in a table (or, with other words,
                 // it is in an object).
                 if (!$parent.is("table")) {
-                    // Obtain the data at the path where the new field is created.
+                    // Obtain the data at the path where the new field is
+                    // created.
                     var data = self.getData(path, $parent);
 
                     // Return true if the given name is already in the data,
@@ -2062,9 +2067,10 @@
             var directValue = false;
             var data = {};
 
-            // Traverse all the fields in the UI which are not being edited.
-            $("[data-json-editor-path]:not(.json-editor-edited)", root)
-                    .each(function () {
+            // Traverse all the fields in the UI which are not being edited (and
+            // they do not have a parent field that is being edited).
+            $("[data-json-editor-path]:not(.json-editor-edited, .json-editor-edited *)",
+                    root).each(function () {
                 var $this = $(this);
                 var type = $this.attr("data-json-editor-type");
 
