@@ -1819,7 +1819,7 @@
 
             // Obtain the definition of the field of type "array" at the path
             // `path` from the `settings.schema` variable.
-            var fieldSchema = self.getDefinitionAtPath(path);
+            var arrayFieldDef = self.getDefinitionAtPath(path);
 
             var $tbody = $elm.find("tbody");
             // The index of the newly added row, used in the paths
@@ -1828,11 +1828,11 @@
             var $deleteButton = createDeleteButton($elm);
 
             // If the type of the schema is explicitly specified
-            if (typeof Object(fieldSchema.schema).type === "string") {
+            if (typeof Object(arrayFieldDef.schema).type === "string") {
                 // then this is an array table with a single column
-                var newSchema = $.extend(true, {}, fieldSchema.schema, {
+                var newSchema = $.extend(true, {}, arrayFieldDef.schema, {
                     type: getTypeOf(data),
-                    path: fieldSchema.path + "." + nextIndex,
+                    path: arrayFieldDef.path + "." + nextIndex,
                     data: data
                 });
                 delete newSchema.label;
@@ -1840,7 +1840,7 @@
                 delete newSchema.editable;
                 $tr.append($("<td>").append(self.createGroup(newSchema),
                             $deleteButton));
-            } else if (!$.isEmptyObject(fieldSchema.schema)) {
+            } else if (!$.isEmptyObject(arrayFieldDef.schema)) {
                 // Only set these two attributes if the array to which we are
                 // adding a new item is an array of objects, because when it is
                 // an array of simple objects, the attributes are already set to
@@ -1852,19 +1852,19 @@
 
                 // An array with the names of all the fields directly in this
                 // schema
-                var order = fieldSchema.schema[settings.orderProperty];
+                var order = arrayFieldDef.schema[settings.orderProperty];
 
                 var fields = []; // Field names
                 for (var i = 0; i < order.length; i++) {
-                    fields.push(fieldSchema.schema[order[i]].name);
+                    fields.push(arrayFieldDef.schema[order[i]].name);
                 }
 
                 for (var i = 0; i < fields.length; ++i) {
                     // The schema of the current field
-                    var sch = fieldSchema.schema[fields[i]];
+                    var sch = arrayFieldDef.schema[fields[i]];
                     // The path of the current field
-                    var currentFieldPath = fieldSchema.path + "." + nextIndex +
-                        "." + fields[i];
+                    var currentFieldPath = arrayFieldDef.path + "." +
+                        nextIndex + "." + fields[i];
 
                     var newSchema = $.extend(true, {}, sch, {
                         path: currentFieldPath,
@@ -1876,7 +1876,7 @@
                     $tr.append($("<td>").append(self.createGroup(newSchema)));
                 }
                 $tr.append($("<td>").append($deleteButton));
-            } else { // if ($.isEmptyObject(fieldSchema.schema))
+            } else { // if ($.isEmptyObject(arrayFieldDef.schema))
                 $tr.append($("<td>").append($deleteButton));
             }
         };
