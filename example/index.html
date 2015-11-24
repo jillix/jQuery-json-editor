@@ -56,7 +56,11 @@ a = {
                 test2: "Testing 2",
                 subsubobject: {
                     test3: "Testing 3"
-                }
+                },
+                dogs: [
+                    { name: "Bobby", breed: "Boxer" },
+                    { name: "Rex", breed: "Wolfdog" }
+                ]
             }
         }
     },
@@ -150,13 +154,24 @@ a = {
                 subobject: {
                     label: "Sub-object",
                     schema: {
-                        _order: ["test2", "subsubobject"],
+                        _order: ["test2", "subsubobject", "dogs"],
                         test2: { label: "Test 2" },
                         subsubobject: {
                             label: "Sub-sub-object",
                             schema: {
                                 _order: ["test3"],
                                 test3: { label: "Test 3" },
+                            }
+                        },
+                        dogs: { // an array nested in an object
+                            label: "Dogs",
+                            addField: true,
+                            deletableFields: true,
+                            schema: {
+                                _order: ["name", "breed"],
+                                name: { label: "Name" },
+                                breed: { label: "Breed", possible: ["Dalmatian",
+                                    "Boxer", "Wolfdog"] },
                             }
                         }
                     }

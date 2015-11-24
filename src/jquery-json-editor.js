@@ -1817,7 +1817,10 @@
                         self.container);
             }
 
-            var fieldSchema = findValue(settings.schema, path);
+            // Obtain the definition of the field of type "array" at the path
+            // `path` from the `settings.schema` variable.
+            var fieldSchema = self.getDefinitionAtPath(path);
+
             var $tbody = $elm.find("tbody");
             // The index of the newly added row, used in the paths
             var nextIndex = $tbody.children().length;
