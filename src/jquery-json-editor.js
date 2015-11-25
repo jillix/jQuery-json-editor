@@ -694,11 +694,13 @@
                 return a;
             }
 
-            if (targetDef.type === "object") {
+            // If the type of the target (child) field is not elementary (is
+            // either "object" or "array")
+            if (targetDef.type === "object" || targetDef.type === "array") {
                 // If the parent object `sourceDef` of the field `targetDef` of
-                // type "object" has the `deletableFields` flag set, mark the
-                // field as `deletableFields`, only if `targetDef` does not
-                // already contain the `deletableFields` property.  The same
+                // type "object" or "array" has the `deletableFields` flag set,
+                // mark the field as `deletableFields`, only if `targetDef` does
+                // not already contain the `deletableFields` property. The same
                 // goes for the `editableFields` and `addField` properties.
                 targetDef.deletableFields =
                     f(targetDef.deletableFields, sourceDef.deletableFields);
@@ -1193,27 +1195,44 @@
                 .text("Enable possible values: ")
                 .append($checkboxPossibleValues);
 
+            // This jQuery element is the <select> (combo box) input inside the
+            // field editor with which the end user selects the type of the
+            // created/edited (see the `options.newFields` variable) field.
             var $typeSelect = $("<select>", {
                 on: {
                     change: function () {
                         var type = $(this).val();
-                        if (type === "object") {
-                            // A field of type "object" cannot have possible
+                        if (type === "object" || type === "array") {
+                            // A field of type "object" or "array" (so all the
+                            // types that are not elementary) cannot have possible
                             // values, so we show the possible values controls
-                            // only for fields of type different than "object".
+                            // only for fields of type different than "object"
+                            // and "array", elementary types (date, string etc.).
                             $possibleValuesLabel.add($possibleValuesDiv).hide();
                         } else {
+                            // Create a new input for the newly selected field
+                            // type from `$typeSelect`.
                             var $clone = JsonEdit.inputs[type].clone()
                                 .attr("data-json-editor-type", type);
+                            // Replace the `$possibleValueInput` input with the
+                            // newly created input.
                             $possibleValueInput.replaceWith($clone);
                             $possibleValueInput = $clone;
+                            // Set the default value for the selected type to
+                            // the newly created input.
                             self.setValueToElement($possibleValueInput,
                                     getDefaultValueForType(type));
+                            // Clear the list of possible values entered by the
+                            // user (it wouldn't make sense to keep them since
+                            // the type of the possible values has been
+                            // changed).
                             $possibleValuesSelect.empty();
 
-                            // A field of type "object" cannot have possible
-                            // values, so we show the possible values controls
-                            // only for fields of type different than "object".
+                            // A field of type "object" or "array" cannot have
+                            // possible values, so we show the possible values
+                            // controls only for fields of type different than
+                            // "object" and "array", for fields of elementary
+                            // types.
                             $possibleValuesLabel.show();
                             $possibleValuesDiv.toggle($checkboxPossibleValues
                                     .is(":checked"));
@@ -1231,6 +1250,9 @@
             $typeSelect.append($("<option>", {
                 value: "object",
                 text: "object"
+            }), $("<option>", {
+                value: "array",
+                text: "array"
             }));
 
             var $labelInput = $("<input>", {
@@ -1359,8 +1381,10 @@
                         // that is the parent of the new/edited field.
                         var definition = self.getDefinitionAtPath(path);
                         var sch = definition.schema;
-                        // The type can be "object" or an elementary type
-                        // (string, date etc.).
+                        // The type can be "object", "array" or an elementary
+                        // type (string, date etc.). See the
+                        // `knownElementaryFieldTypes` variable for the
+                        // elementary types.
                         if (type === "object") {
                             newSchema.schema = {};
                             newSchema.schema[settings.orderProperty] = [];
@@ -1441,6 +1465,89 @@
                                 // before the field editor.
                                 $div.before(self.createGroup(newSchema));
                             }
+                        // the new field has the type "array"
+                        } else if (type === "array") {
+                            newSchema.schema = {};
+                            newSchema.schema[settings.orderProperty] = [];
+
+                            // If the field editor is inside a table
+                            if (inTable) {
+                                // If the parent array currently has a single
+                                // field
+                                if (typeof sch.type === "string") {
+                                    // If a new field is created
+                                    if (options.newFields) {
+                                        // TODO: Not yet implemented.
+                                    // else if an existing field is edited
+                                    } else {
+                                        // TODO: Not yet implemented.
+                                    }
+                                // If the parent array currently has no fields
+                                } else if ($.isEmptyObject(sch)) {
+                                    // If a new field is created
+                                    if (options.newFields) {
+                                        // TODO: Not yet implemented.
+                                    // else if an existing field is edited
+                                    } else {
+                                        alert(settings.messages.
+                                                EDIT_FIELD_IN_ARRAY_WITHOUT_FIELDS);
+                                    }
+                                // If the parent array currently has at least
+                                // two fields
+                                } else {
+                                    // If a new field is created
+                                    if (options.newFields) {
+                                        // TODO: Not yet implemented.
+                                    // else if an existing field is edited
+                                    } else {
+                                        // TODO: Not yet implemented.
+                                    }
+                                }
+                            // else if not in a table but in an object
+                            } else { // !inTable
+                                var order = sch[settings.orderProperty];
+                                // If a new field is created
+                                if (options.newFields) {
+                                    // A new field of type array is added to an
+                                    // object.
+                                    order.push(name);
+                                    // Insert the new schema in the
+                                    // `settings.schema` variable.
+                                    sch[name] = newSchema;
+                                // else if an existing field is edited
+                                } else {
+                                    // A field of type array, object or other
+                                    // type is edited to become a field of type
+                                    // array. The field is inside an object.
+                                    var oldName = self.getNameFromPath($editedInput
+                                            .attr("data-json-editor-path"));
+                                    // Keep the schema of the old field
+                                    // definition (the fields in the array) in
+                                    // the new field definition because the
+                                    // field of type "array" is just edited
+                                    // (this means that only its name/path and
+                                    // label could be changed, not the fields in
+                                    // it).
+                                    newSchema.schema = sch[oldName].schema;
+                                    // Insert the new schema in the
+                                    // `settings.schema` variable.
+                                    sch[name] = newSchema;
+                                    // If the name (so also the path) of the
+                                    // field has been changed, replace the old
+                                    // name with the new name in the order array
+                                    // and delete the old field definition with
+                                    // the old name from the schema.
+                                    if (name !== oldName) {
+                                        order[order.indexOf(oldName)] = name;
+                                        delete sch[oldName];
+                                    }
+                                }
+
+                                // Create and show the UI for the schema and add it
+                                // before the field editor.
+                                $div.before(self.createGroup(newSchema));
+                            }
+                        // type is an elementary type (not "object" or "array")
                         } else {
                             newSchema.data = getDefaultValueForType(type);
 
