@@ -225,22 +225,6 @@
     }
 
     /*!
-     * schemaContainsMoreFields
-     * Determines if a schema contains other fields (defines an array of objects
-     * with one or more fields or an object with one or more fields).
-     *
-     * @name schemaContainsMoreFields
-     * @function
-     * @param {Object} schema The schema to analyze.
-     * @return {Boolean} True if the schema contains more fields, false otherwise.
-     */
-    function schemaContainsMoreFields(schema) {
-        return (schema.type === "array" &&
-                typeof Object(schema.schema).type !== "string") ||
-            schema.type === "object";
-    }
-
-    /*!
      * getTypeOf
      * Returns the type of input variable.
      *
@@ -299,6 +283,27 @@
             "object" : {},
             "array"  : []
         }[type];
+    }
+
+    /*!
+     * isElementaryValue
+     * Returns true if the argument is an elementary value (a number, a boolean,
+     * a string, a regular expression or a date), and false otherwise (if the
+     * argument is an object with one or more "own" properties.
+     * Relevant StackOverflow question:
+     * http://stackoverflow.com/q/33939789/258462 .
+     *
+     * @name isElementaryValue
+     * @function
+     * @param {Object} x The argument whose type to test.
+     * @return {Boolean} True of `x` is an elementary value, false otherwise.
+     */
+    function isElementaryValue(x) {
+        return typeof x === "number" ||
+            typeof x === "boolean" ||
+            typeof x === "string" ||
+            x instanceof RegExp ||
+            x instanceof Date;
     }
 
     /**
@@ -377,47 +382,89 @@
          *
          * @name schemaCoreFields
          * @function
-         * @param {Object} obj The current field object.
+         * @param {Object} schema The current field schema object.
          * @param {String} path The path to the field value.
          * @return {undefined}
          */
-        function schemaCoreFields(obj, path) {
+        function schemaCoreFields(schema, path) {
             path = path || "";
-            for (var k in obj) {
-                if (!obj.hasOwnProperty(k) || k === settings.orderProperty) continue;
+            for (var fieldName in schema) {
+                // A field schema contains properties whose names are the names
+                // of the fields in it and whose values are the field definition
+                // of these fields, and besides these, a property with the name
+                // stored in `settings.orderProperty` with the value being an
+                // array of 0 or more strings. This property is required in the
+                // schema resulted from the call to `schemaCoreFields` but it is
+                // optional in the schema passed to it which is the schema given
+                // by the user. This `for` loop ignores the existing order
+                // arrays inside the schemas.
+                if (!schema.hasOwnProperty(fieldName) ||
+                        fieldName === settings.orderProperty) continue;
 
-                var c = obj[k];
-                var _schemaContainsMoreFields = schemaContainsMoreFields(c);
-                // If the schema contains more fields
-                if (_schemaContainsMoreFields) {
+                var currentFieldDef = schema[fieldName];
+                var defCanContainMoreFields =
+                    currentFieldDef.type === "object" ||
+                    currentFieldDef.type === "array";
+                // If the schema can contain more fields,
+                if (defCanContainMoreFields) {
                     // recursively process them
-                    schemaCoreFields(c.schema, path + k + ".");
+                    schemaCoreFields(currentFieldDef.schema, path + fieldName +
+                            ".");
 
                 // If the type is not specified but a non-empty array of
                 // possible values is specified
-                } else if (!c.type && c.possible) {
-                    // set the type obtained by analyzing the first possible value
-                    c.type = getTypeOf(c.possible[0]);
+                } else if (!currentFieldDef.type && currentFieldDef.possible) {
+                    // set the type obtained by analyzing the first possible
+                    // value
+                    currentFieldDef.type = getTypeOf(
+                            currentFieldDef.possible[0]);
                 }
-                c.label = c.label || k;
-                c.path = path + k;
-                c.name = k;
+                currentFieldDef.label = currentFieldDef.label || fieldName;
+                currentFieldDef.path = path + fieldName;
+                currentFieldDef.name = fieldName;
 
-                // If the `c` schema contains more fields and it does not have the
-                // order of its fields specified,
-                if (_schemaContainsMoreFields &&
-                        !Array.isArray(Object(c.schema)[settings.orderProperty])) {
-                    c.schema = c.schema || {};
-                    // Generate the default order of its fields using Object.keys.
-                    c.schema[settings.orderProperty] = Object.keys(c.schema);
+                // If `currentFieldDef` can contain more fields and it does not
+                // have the order of its fields specified,
+                if (defCanContainMoreFields &&
+                        !Array.isArray(Object(currentFieldDef.schema)
+                            [settings.orderProperty])) {
+                    // Generate an empty schema if there is no schema specified.
+                    currentFieldDef.schema = currentFieldDef.schema || {};
+                    // Generate the default order of the fields inside the
+                    // schema using `Object.keys`.
+                    currentFieldDef.schema[settings.orderProperty] =
+                        Object.keys(currentFieldDef.schema);
                 }
             }
         }
 
         /*!
+         * hasEmptySchema
+         * A function that checks if the given field definition of an array or
+         * of an object has a schema without any fields.
+         *
+         * @name hasEmptySchema
+         * @function
+         * @param {Object} def THe definition of the field whose schema to
+         * check.
+         * @return {Boolean} True if the schema of the given field has no
+         * fields, false otherwise.
+         */
+        function hasEmptySchema(def) {
+            // This function only works with fields of type "object" and "array"
+            // which have a correct schema. A correct schema always has an array
+            // property with the name taken from `settings.orderProperty`.
+            if (getTypeOf(def.schema) !== "object" ||
+                    getTypeOf(def.schema[settings.orderProperty]) !== "array") {
+                return;
+            }
+            return def.schema[settings.orderProperty].length === 0;
+        }
+
+        /*!
          * createAddButton
-         * Returns a new add button to be inserted in a table (the UI for an
-         * array).
+         * Returns a new add button to be inserted in a table (which is the UI
+         * for an array).
          *
          * @name createAddButton
          * @function
@@ -435,8 +482,14 @@
 
                         // We use `undefined` when the data is an elementary
                         // object, and an empty object when it is an object with
-                        // properties.
-                        if (Object.getOwnPropertyNames(data).length === 0) {
+                        // properties. If `data` is an object without any own
+                        // properties, it does not matter if below we call
+                        // `self.setData` with `undefined` or `{}` because the
+                        // `self.setData` method will skip over the new item
+                        // editor in the table because in the row of the new
+                        // item editor there is no element with the
+                        // `data-json-editor-path` attribute set.
+                        if (isElementaryValue(data)) {
                             data = undefined;
                         } else {
                             data = {};
@@ -491,6 +544,23 @@
                 $(e).children("td:last").remove();
             });
             addControlsToLastColumn($table);
+        }
+
+        /*!
+         * deleteAllNestedFields
+         * Deletes all the nested fields inside a field definition. It works
+         * only with fields of type "object" or "array" (it would not make sense
+         * for fields of elementary types which cannot have nested fields).
+         *
+         * @name deleteAllNestedFields
+         * @function
+         * @param {Object} def The field definition from which to delete all the
+         * nested fields.
+         * @return {undefined}
+         */
+        function deleteAllNestedFields(def) {
+            def.schema = {};
+            def.schema[settings.orderProperty] = [];
         }
 
         /*!
@@ -571,7 +641,7 @@
                     def.schema = def.schema[order[0]];
                 }
             } else {
-                def.schema = {};
+                removeAllNestedFields(def);
                 addColumnWithControls($table);
             }
         }
@@ -821,6 +891,7 @@
                 var headers = [];
                 // headers
                 var $ths = [];
+                // If the schema of the array contains a single field
                 if (typeof Object(field.schema).type === "string") {
                     var sch = field.schema;
                     headers.push(sch.name);
@@ -830,7 +901,8 @@
                     }
                     var $th = createColumnHeader(sch);
                     $ths.push($th);
-                } else {
+                // Else if the schema of the array contains more than one field
+                } else if (!hasEmptySchema(field)) {
                     var order = field.schema[settings.orderProperty];
                     for (var i = 0; i < order.length; i++) {
                         var k = order[i];
@@ -843,6 +915,9 @@
                         var $th = createColumnHeader(sch);
                         $ths.push($th);
                     }
+                // Else if the schema of the array does not contain any fields
+                } else {
+                    // Don't do anything.
                 }
                 if (field.addField) {
                     $ths.push($("<th>").append(createNewFieldEditor({
@@ -857,10 +932,14 @@
 
                 // footers (with add new item controls)
                 $footers = $tfoot.children("tr");
+                // An array which will contain all the <td> jQuery elements that
+                // should be added to the table footer row in the <tfoot>
+                // section of the table.
                 var $tdfs = [];
                 var $addButton = createAddButton($input);
                 // TODO: maybe we should use self.add here too after extending
                 // it a bit, in both branches of the `if` structure:
+                // If the array schema contains a single field
                 if (typeof Object(field.schema).type === "string") {
                     var $td = $("<td>");
                     var sch = field.schema;
@@ -869,8 +948,10 @@
                         // special path for the new edited item:
                         path: field.path + ".+"
                     }))));
+                    // Add the add item button to the single <td> in this row.
                     $td.append($addButton);
-                } else {
+                // Else if the array schema contains at least two fields
+                } else if (!hasEmptySchema(field)) {
                     for (var i = 0; i < headers.length; ++i) {
                         var sch = field.schema[headers[i]];
                         // special path for the new edited item:
@@ -888,6 +969,10 @@
                             path: path
                         }))));
                     }
+                    $tdfs.push($("<td>").append($addButton));
+                // Else if the array schema is empty, it does not contain fields
+                } else {
+                    // Just add a table cell with the add item button.
                     $tdfs.push($("<td>").append($addButton));
                 }
                 $footers.append($tdfs);
@@ -1318,11 +1403,12 @@
                     // otherwise return false.
                     return Object.keys(data).indexOf(name) > -1;
                 }
-                var sch = self.getDefinitionAtPath(path).schema;
+                var def = self.getDefinitionAtPath(path);
                 // Handle empty schemas (arrays without any fields).
-                if ($.isEmptyObject(sch)) {
+                if (hasEmptySchema(def)) {
                     return false;
                 }
+                var sch = def.schema;
                 // If the schema `sch` contains a single field
                 if (typeof sch.type === "string") {
                     return name === (sch.name ||
@@ -1386,8 +1472,7 @@
                         // `knownElementaryFieldTypes` variable for the
                         // elementary types.
                         if (type === "object") {
-                            newSchema.schema = {};
-                            newSchema.schema[settings.orderProperty] = [];
+                            deleteAllNestedFields(newSchema);
 
                             // If the field editor is inside a table
                             if (inTable) {
@@ -1401,7 +1486,7 @@
                                         // TODO: Not yet implemented.
                                     }
                                 // If the array currently has no fields
-                                } else if ($.isEmptyObject(sch)) {
+                                } else if (hasEmptySchema(definition)) {
                                     // If a new field is created
                                     if (options.newFields) {
                                         // TODO: Not yet implemented.
@@ -1467,8 +1552,7 @@
                             }
                         // the new field has the type "array"
                         } else if (type === "array") {
-                            newSchema.schema = {};
-                            newSchema.schema[settings.orderProperty] = [];
+                            deleteAllNestedFields(newSchema);
 
                             // If the field editor is inside a table
                             if (inTable) {
@@ -1483,7 +1567,7 @@
                                         // TODO: Not yet implemented.
                                     }
                                 // If the parent array currently has no fields
-                                } else if ($.isEmptyObject(sch)) {
+                                } else if (hasEmptySchema(definition)) {
                                     // If a new field is created
                                     if (options.newFields) {
                                         // TODO: Not yet implemented.
@@ -1577,7 +1661,7 @@
                                     // the new field will be alone and its data will
                                     // be accessed directly from the only input in
                                     // that row.
-                                    if (!$.isEmptyObject(sch)) {
+                                    if (!hasEmptySchema(definition)) {
                                         path2 += "." + name;
                                     }
                                     sch2 = $.extend(true, {}, newSchema, {
@@ -1718,13 +1802,10 @@
                                     }
                                 // else if the schema is an empty object (they array
                                 // has no fields)
-                                } else if ($.isEmptyObject(sch)) {
+                                } else if (hasEmptySchema(definition)) {
                                     // A new field/column is added to a table
                                     // without fields/columns.
                                     if (options.newFields) {
-                                        // First update the schema.
-                                        definition.schema = newSchema;
-
                                         // The new column should not have the
                                         // attribute `data-json-editor-name` set in
                                         // the column header, so we clone the schema
@@ -1740,7 +1821,16 @@
                                         // in the last column after removing the
                                         // controls column, and that last column
                                         // exists only after calling `addNewColumn`.
+                                        // Add the new column before updating
+                                        // the schema of the array because the
+                                        // `addNewColumn` function uses the old
+                                        // schema when calling the
+                                        // `createNewCellEditor` function.
                                         addNewColumn($parent, def);
+
+                                        // Update the schema of the array.
+                                        definition.schema = newSchema;
+
                                         deleteControlsColumn($parent);
                                     // Else an existing field/column is edited in a
                                     // table without fields/columns.
@@ -1947,7 +2037,7 @@
                 delete newSchema.editable;
                 $tr.append($("<td>").append(self.createGroup(newSchema),
                             $deleteButton));
-            } else if (!$.isEmptyObject(arrayFieldDef.schema)) {
+            } else if (!hasEmptySchema(arrayFieldDef)) {
                 // Only set these two attributes if the array to which we are
                 // adding a new item is an array of objects, because when it is
                 // an array of simple objects, the attributes are already set to
@@ -1983,7 +2073,7 @@
                     $tr.append($("<td>").append(self.createGroup(newSchema)));
                 }
                 $tr.append($("<td>").append($deleteButton));
-            } else { // if ($.isEmptyObject(arrayFieldDef.schema))
+            } else { // if (hasEmptySchema(arrayFieldDef))
                 $tr.append($("<td>").append($deleteButton));
             }
         };
