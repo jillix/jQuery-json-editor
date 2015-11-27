@@ -36,6 +36,82 @@
     }
 
     /*!
+     * putValue
+     * Puts the given `value` in the `parent` object at the path decribed by the
+     * dot notation string `dotNot`.
+     *
+     * @name putValue
+     * @function
+     * @param {Object} parent The object in which to put `value`.
+     * @param {String} dotNot The path at which to insert the `value` in the
+     * `parent` object.
+     * @param {Object} value The value to put at the path `dotNot` in the
+     * `parent` object.
+     * @return {undefined}
+     */
+    function putValue(parent, dotNot, value) {
+
+        // We remove the last segment of the dot notation string (`dotNot`) and
+        // store that last segment in the `name` variable which is used later.
+        dotNot = dotNot.split(".");
+        var name = dotNot.pop();
+        dotNot = dotNot.join(".");
+
+        // We get the parent object in which the `value` should be inserted
+        // inside the `name` property.
+        var parent2 = findValue(parent, dotNot);
+        // If this searched parent object does not exist
+        if (typeof parent2 === "undefined") {
+            // We create it in the `obj` variable
+            var obj = {};
+            // Set its `name` property to the given `value`
+            obj[name] = value;
+            // And recursively call the `putValue` method to put `obj` at the
+            // dot notation obtained above by removing the last segment from the
+            // original dot notation.
+            putValue(parent, dotNot, obj);
+            // Then we return. We are done.
+            return;
+        }
+        // Else if this searched parent object exists, we set its property with
+        // the name stored in the `name` variable to the value `value`.
+        parent2[name] = value;
+    }
+
+    /*!
+     * deleteValue
+     * Deletes the value in the `parent` object at the path decribed by the
+     * dot notation string `dotNot`.
+     *
+     * @name deleteValue
+     * @function
+     * @param {Object} parent The object in which to delete the value at the
+     * `dotNot` path.
+     * @param {String} dotNot The path at which to delete the value.
+     * @return {undefined}
+     */
+    function deleteValue(parent, dotNot) {
+
+        // We remove the last segment of the dot notation string (`dotNot`) and
+        // store that last segment in the `name` variable which is used later.
+        dotNot = dotNot.split(".");
+        var name = dotNot.pop();
+        dotNot = dotNot.join(".");
+
+        // We get the parent object of the value to be deleted.
+        var parent2 = findValue(parent, dotNot);
+        // If the parent object of the value to be deleted (`parent2`) is
+        // undefined
+        if (typeof parent2 === "undefined") {
+            // That means the value to be deleted does not exist so we return.
+            return;
+        }
+        // Else we delete the property with the name `name` from the parent
+        // object of the value to be deleted (`parent2`).
+        delete parent2[name];
+    }
+
+    /*!
      * flattenObject
      * Converts an object to a flat one.
      *
@@ -1153,6 +1229,25 @@
         };
 
         /**
+         * setNameInPath
+         * Sets the name part (which is the substring after the last "."
+         * character) in the given field path and returns the new path.
+         *
+         * @name setNameInPath
+         * @function
+         * @param {String} path Required, the path in which to replace the old
+         * name with the new given name
+         * @param {String} newName Required, the new name to put in the `path`.
+         * @return {String} The new path which has the name part as the
+         * `newName`.
+         */
+        self.setNameInPath = function (path, newName) {
+            var parts = path.split(".");
+            parts[parts.length - 1] = newName;
+            return parts.join(".");
+        };
+
+        /**
          * resetPathIndicesInTable
          * If a table contains these paths: `hobbies.0`, `hobbies.2` without
          * `hobbies.1`, after calling this function, the `hobbies.2` paths will
@@ -1522,7 +1617,8 @@
                                     // A field of type object or other type is
                                     // edited to become a field of type object.
                                     // The field is inside an object.
-                                    var oldName = self.getNameFromPath($editedInput
+                                    var oldName = self.getNameFromPath(
+                                            $editedInput
                                             .attr("data-json-editor-path"));
                                     // Keep the schema of the old field
                                     // definition (the fields in the object) in
@@ -1600,11 +1696,12 @@
                                     sch[name] = newSchema;
                                 // else if an existing field is edited
                                 } else {
+                                    var _path = $editedInput
+                                        .attr("data-json-editor-path");
                                     // A field of type array, object or other
                                     // type is edited to become a field of type
                                     // array. The field is inside an object.
-                                    var oldName = self.getNameFromPath($editedInput
-                                            .attr("data-json-editor-path"));
+                                    var oldName = self.getNameFromPath(_path);
                                     // Keep the schema of the old field
                                     // definition (the fields in the array) in
                                     // the new field definition because the
@@ -1616,6 +1713,15 @@
                                     // Insert the new schema in the
                                     // `settings.schema` variable.
                                     sch[name] = newSchema;
+                                    // Update the default data used for the
+                                    // edited field's new input group (DOM
+                                    // representation of the field). The next
+                                    // instruction does this, but also updates
+                                    // the default data for all the fields
+                                    // taking it from the way the input groups
+                                    // are currently filled in the UI.
+                                    settings.data = self.getData(null, null,
+                                            null, true);
                                     // If the name (so also the path) of the
                                     // field has been changed, replace the old
                                     // name with the new name in the order array
@@ -1624,6 +1730,10 @@
                                     if (name !== oldName) {
                                         order[order.indexOf(oldName)] = name;
                                         delete sch[oldName];
+                                        // Then replace in the `settings.data`
+                                        // variable the old field name with the
+                                        // new field name.
+                                        renameValueAtPath(_path, name);
                                     }
                                 }
 
@@ -2104,6 +2214,56 @@
             return findValue(settings.data, fieldPath);
         };
 
+        /*!
+         * setValueAtPath
+         * Sets the value of the field at `fieldPath` path in the
+         * `settings.data` variable.
+         *
+         * @name setValueAtPath
+         * @function
+         * @param {String} fieldPath The path at which to put the `value`.
+         * @param {Object} value The value to put at `fieldPath` path.
+         * @return {undefined}
+         */
+        function setValueAtPath(fieldPath, value) {
+            putValue(settings.data, fieldPath, value);
+        }
+
+        /*!
+         * renameValueAtPath
+         * Renames the value of the field at `fieldPath` path in the
+         * `settings.data` variable to the name specified in the `newName`
+         * argument. For example, if `fieldPath` is "first.second.third" and
+         * `newName` is "test", after calling this function the value that
+         * before was found at the "first.second.third" path will now be found
+         * at the path "first.second.test".
+         *
+         * @name renameValueAtPath
+         * @function
+         * @param {String} fieldPath The path at which to put the `value`.
+         * @param {Object} value The value to put at `fieldPath` path.
+         * @return {undefined}
+         */
+        function renameValueAtPath(fieldPath, newName) {
+            setValueAtPath(self.setNameInPath(fieldPath, newName),
+                    self.getValue(fieldPath));
+            deleteValueAtPath(fieldPath);
+        }
+
+        /*!
+         * deleteValueAtPath
+         * Deletes the value of the field at `fieldPath` path in the
+         * `settings.data` variable.
+         *
+         * @name deleteValueAtPath
+         * @function
+         * @param {String} fieldPath The path at which to delete the value.
+         * @return {undefined}
+         */
+        function deleteValueAtPath(fieldPath) {
+            deleteValue(settings.data, fieldPath);
+        }
+
         /**
          * getValueFromElement
          * Returns the value of the specified jQuery input element. This is
@@ -2278,9 +2438,13 @@
          * @param {Boolean} includeNewItemEditors Optional, if true the paths
          * ending in ".+" or containing ".+." will be included in the final data
          * object.
+         * @param {Boolean} includeFieldsBeingEdited Optional, if true the data
+         * of the fields that are currently being edited will also be included
+         * in the final returned object.
          * @return {Object} The object containing data taken from form inputs.
          */
-        self.getData = function (path, root, includeNewItemEditors) {
+        self.getData = function (path, root, includeNewItemEditors,
+                includeFieldsBeingEdited) {
             path = path || "";
             root = root || self.container;
 
@@ -2288,9 +2452,14 @@
             var data = {};
 
             // Traverse all the fields in the UI which are not being edited (and
-            // they do not have a parent field that is being edited).
-            $("[data-json-editor-path]:not(.json-editor-edited, .json-editor-edited *)",
-                    root).each(function () {
+            // they do not have a parent field that is being edited). If the
+            // `includeFieldsBeingEdited` argument is true, also traverse the
+            // fields that are being edited and their descendant fields.
+            var selector = "[data-json-editor-path]";
+            if (!includeFieldsBeingEdited) {
+                selector += ":not(.json-editor-edited, .json-editor-edited *)";
+            }
+            $(selector, root).each(function () {
                 var $this = $(this);
                 var type = $this.attr("data-json-editor-type");
 
