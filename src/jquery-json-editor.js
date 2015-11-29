@@ -21,10 +21,11 @@
      */
     function findValue(parent, dotNot) {
 
+        var splits, value;
+
         if (!dotNot) return parent;
 
-        var splits = dotNot.split(".");
-        var value;
+        splits = dotNot.split(".");
 
         for (var i = 0; i < splits.length; ++i) {
             value = parent[splits[i]];
@@ -33,6 +34,86 @@
         }
 
         return value;
+    }
+
+    /*!
+     * putValue
+     * Puts the given `value` in the `parent` object at the path decribed by the
+     * dot notation string `dotNot`.
+     *
+     * @name putValue
+     * @function
+     * @param {Object} parent The object in which to put `value`.
+     * @param {String} dotNot The path at which to insert the `value` in the
+     * `parent` object.
+     * @param {Object} value The value to put at the path `dotNot` in the
+     * `parent` object.
+     * @return {undefined}
+     */
+    function putValue(parent, dotNot, value) {
+
+        var name, parent2;
+
+        // We remove the last segment of the dot notation string (`dotNot`) and
+        // store that last segment in the `name` variable which is used later.
+        dotNot = dotNot.split(".");
+        name = dotNot.pop();
+        dotNot = dotNot.join(".");
+
+        // We get the parent object in which the `value` should be inserted
+        // inside the `name` property.
+        parent2 = findValue(parent, dotNot);
+        // If this searched parent object does not exist
+        if (typeof parent2 === "undefined") {
+            // We create it in the `obj` variable
+            var obj = {};
+            // Set its `name` property to the given `value`
+            obj[name] = value;
+            // And recursively call the `putValue` method to put `obj` at the
+            // dot notation obtained above by removing the last segment from the
+            // original dot notation.
+            putValue(parent, dotNot, obj);
+            // Then we return. We are done.
+            return;
+        }
+        // Else if this searched parent object exists, we set its property with
+        // the name stored in the `name` variable to the value `value`.
+        parent2[name] = value;
+    }
+
+    /*!
+     * deleteValue
+     * Deletes the value in the `parent` object at the path decribed by the
+     * dot notation string `dotNot`.
+     *
+     * @name deleteValue
+     * @function
+     * @param {Object} parent The object in which to delete the value at the
+     * `dotNot` path.
+     * @param {String} dotNot The path at which to delete the value.
+     * @return {undefined}
+     */
+    function deleteValue(parent, dotNot) {
+
+        var name, parent2;
+
+        // We remove the last segment of the dot notation string (`dotNot`) and
+        // store that last segment in the `name` variable which is used later.
+        dotNot = dotNot.split(".");
+        name = dotNot.pop();
+        dotNot = dotNot.join(".");
+
+        // We get the parent object of the value to be deleted.
+        parent2 = findValue(parent, dotNot);
+        // If the parent object of the value to be deleted (`parent2`) is
+        // undefined
+        if (typeof parent2 === "undefined") {
+            // That means the value to be deleted does not exist so we return.
+            return;
+        }
+        // Else we delete the property with the name `name` from the parent
+        // object of the value to be deleted (`parent2`).
+        delete parent2[name];
     }
 
     /*!
@@ -194,10 +275,11 @@
      */
     function sch(obj, out, path) {
 
+        var t;
         var schema = out || {};
         path = path || "";
 
-        var t = getTypeOf(obj);
+        t = getTypeOf(obj);
         if (t !== "object") {
             return {
                 type: t
@@ -222,22 +304,6 @@
         }
 
         return schema;
-    }
-
-    /*!
-     * schemaContainsMoreFields
-     * Determines if a schema contains other fields (defines an array of objects
-     * with one or more fields or an object with one or more fields).
-     *
-     * @name schemaContainsMoreFields
-     * @function
-     * @param {Object} schema The schema to analyze.
-     * @return {Boolean} True if the schema contains more fields, false otherwise.
-     */
-    function schemaContainsMoreFields(schema) {
-        return (schema.type === "array" &&
-                typeof Object(schema.schema).type !== "string") ||
-            schema.type === "object";
     }
 
     /*!
@@ -301,6 +367,27 @@
         }[type];
     }
 
+    /*!
+     * isElementaryValue
+     * Returns true if the argument is an elementary value (a number, a boolean,
+     * a string, a regular expression or a date), and false otherwise (if the
+     * argument is an object with one or more "own" properties.
+     * Relevant StackOverflow question:
+     * http://stackoverflow.com/q/33939789/258462 .
+     *
+     * @name isElementaryValue
+     * @function
+     * @param {Object} x The argument whose type to test.
+     * @return {Boolean} True of `x` is an elementary value, false otherwise.
+     */
+    function isElementaryValue(x) {
+        return typeof x === "number" ||
+            typeof x === "boolean" ||
+            typeof x === "string" ||
+            x instanceof RegExp ||
+            x instanceof Date;
+    }
+
     /**
      * $.fn.jsonEdit
      * Initializes the JSON editor on selected elements.
@@ -324,11 +411,15 @@
      *  schemas which contains the order in which the fields from the schemas
      *  should be laid down in the user interface. Default value: "_order".
      *  - `messages` (Object): An object containing one or more of the following
-     *  properties: `EDIT_FIELD_IN_ARRAY_WITHOUT_FIELDS`, `INVALID_FIELD_NAME`
-     *  (which can contain the string `{0}` that will be replaced with the path
-     *  of the object in which the edited/added field is found). There
-     *  properties are strings that should be translated in the language of the
-     *  user. By default they contain the English version of the messages.
+     *  properties: `EDIT_FIELD_IN_ARRAY_WITHOUT_FIELDS` (default value:
+     *  "Impossible situation: trying to edit a field in an array without
+     *  fields."), `INVALID_FIELD_NAME` (default value: "The name of the field
+     *  should be a non-empty string without dots, different than "+" and not
+     *  already existing under the path "{0}".") (which can contain the string
+     *  `{0}` that will be replaced with the path of the object in which the
+     *  edited/added field is found). There properties are strings that should
+     *  be translated in the language of the user. By default they contain the
+     *  English version of the messages.
      *
      * @return {Object} The JSON editor object containing:
      *
@@ -341,8 +432,10 @@
      */
     var JsonEdit = $.fn.jsonEdit = function (opt_options) {
 
+        var settings, self;
+
         // Default settings
-        var settings = $.extend({
+        settings = $.extend({
             data: {},
             schema: {},
             autoInit: true,
@@ -359,7 +452,7 @@
         }, opt_options);
 
         // JSON Editor object
-        var self = {
+        self = {
 
             // UI
             labels: $.extend(JsonEdit.labels, opt_options.labels),
@@ -377,47 +470,129 @@
          *
          * @name schemaCoreFields
          * @function
-         * @param {Object} obj The current field object.
+         * @param {Object} schema The current field schema object.
          * @param {String} path The path to the field value.
          * @return {undefined}
          */
-        function schemaCoreFields(obj, path) {
+        function schemaCoreFields(schema, path) {
             path = path || "";
-            for (var k in obj) {
-                if (!obj.hasOwnProperty(k) || k === settings.orderProperty) continue;
+            for (var fieldName in schema) {
+                var currentFieldDef, defCanContainMoreFields;
 
-                var c = obj[k];
-                var _schemaContainsMoreFields = schemaContainsMoreFields(c);
-                // If the schema contains more fields
-                if (_schemaContainsMoreFields) {
+                // A field schema contains properties whose names are the names
+                // of the fields in it and whose values are the field definition
+                // of these fields, and besides these, a property with the name
+                // stored in `settings.orderProperty` with the value being an
+                // array of 0 or more strings. This property is required in the
+                // schema resulted from the call to `schemaCoreFields` but it is
+                // optional in the schema passed to it which is the schema given
+                // by the user. This `for` loop ignores the existing order
+                // arrays inside the schemas.
+                if (!schema.hasOwnProperty(fieldName) ||
+                        fieldName === settings.orderProperty) continue;
+
+                currentFieldDef = schema[fieldName];
+                defCanContainMoreFields =
+                    currentFieldDef.type === "object" ||
+                    currentFieldDef.type === "array";
+                // If the schema can contain more fields,
+                if (defCanContainMoreFields) {
                     // recursively process them
-                    schemaCoreFields(c.schema, path + k + ".");
+                    schemaCoreFields(currentFieldDef.schema, path + fieldName +
+                            ".");
 
                 // If the type is not specified but a non-empty array of
                 // possible values is specified
-                } else if (!c.type && c.possible) {
-                    // set the type obtained by analyzing the first possible value
-                    c.type = getTypeOf(c.possible[0]);
+                } else if (!currentFieldDef.type && currentFieldDef.possible) {
+                    // set the type obtained by analyzing the first possible
+                    // value
+                    currentFieldDef.type = getTypeOf(
+                            currentFieldDef.possible[0]);
                 }
-                c.label = c.label || k;
-                c.path = path + k;
-                c.name = k;
+                currentFieldDef.label = currentFieldDef.label || fieldName;
+                currentFieldDef.path = path + fieldName;
+                currentFieldDef.name = fieldName;
 
-                // If the `c` schema contains more fields and it does not have the
-                // order of its fields specified,
-                if (_schemaContainsMoreFields &&
-                        !Array.isArray(Object(c.schema)[settings.orderProperty])) {
-                    c.schema = c.schema || {};
-                    // Generate the default order of its fields using Object.keys.
-                    c.schema[settings.orderProperty] = Object.keys(c.schema);
+                // If `currentFieldDef` can contain more fields and it does not
+                // have the order of its fields specified,
+                if (defCanContainMoreFields &&
+                        !Array.isArray(Object(currentFieldDef.schema)
+                            [settings.orderProperty])) {
+                    // Generate an empty schema if there is no schema specified.
+                    currentFieldDef.schema = currentFieldDef.schema || {};
+                    // Generate the default order of the fields inside the
+                    // schema using `Object.keys`.
+                    currentFieldDef.schema[settings.orderProperty] =
+                        Object.keys(currentFieldDef.schema);
+                }
+            }
+        }
+
+        /*!
+         * hasEmptySchema
+         * A function that checks if the given field definition of an array or
+         * of an object has a schema without any fields.
+         *
+         * @name hasEmptySchema
+         * @function
+         * @param {Object} def The definition of the field whose schema to
+         * check.
+         * @return {Boolean} True if the schema of the given field has no
+         * fields, false otherwise.
+         */
+        function hasEmptySchema(def) {
+            // This function only works with fields of type "object" and "array"
+            // which have a correct schema. A correct schema always has an array
+            // property with the name taken from `settings.orderProperty`.
+            if (getTypeOf(def.schema) !== "object" ||
+                    getTypeOf(def.schema[settings.orderProperty]) !== "array") {
+                return;
+            }
+            return def.schema[settings.orderProperty].length === 0;
+        }
+
+        /*!
+         * updateDescendantDefPaths
+         * Updates the paths of the descendant field definitions according to
+         * the path of the given field definition and to the names of the
+         * descendant fields. For example if `def.path` is
+         * "first.second" and `def` contains a field with the path
+         * "first.test.third", the new path of that field will be
+         * "first.second.third".
+         *
+         * @name updateDescendantDefPaths
+         * @function
+         * @param {Object} def The definition of the field whose descendant
+         * fields' paths should be updated.
+         * @return {undefined}
+         */
+        function updateDescendantDefPaths(def) {
+            var p = def.path;
+
+            if (typeof def.schema !== "object") return;
+
+            for (var fieldName in def.schema) {
+                var subDef;
+
+                if (!def.schema.hasOwnProperty(fieldName) ||
+                        fieldName === settings.orderProperty) {
+                    continue;
+                }
+
+                subDef = def.schema[fieldName];
+
+                subDef.path = p + "." + fieldName;
+                if (subDef.type === "object" ||
+                        subDef.type === "array") {
+                    process(subDef);
                 }
             }
         }
 
         /*!
          * createAddButton
-         * Returns a new add button to be inserted in a table (the UI for an
-         * array).
+         * Returns a new add button to be inserted in a table (which is the UI
+         * for an array).
          *
          * @name createAddButton
          * @function
@@ -435,8 +610,14 @@
 
                         // We use `undefined` when the data is an elementary
                         // object, and an empty object when it is an object with
-                        // properties.
-                        if (Object.getOwnPropertyNames(data).length === 0) {
+                        // properties. If `data` is an object without any own
+                        // properties, it does not matter if below we call
+                        // `self.setData` with `undefined` or `{}` because the
+                        // `self.setData` method will skip over the new item
+                        // editor in the table because in the row of the new
+                        // item editor there is no element with the
+                        // `data-json-editor-path` attribute set.
+                        if (isElementaryValue(data)) {
                             data = undefined;
                         } else {
                             data = {};
@@ -494,6 +675,23 @@
         }
 
         /*!
+         * deleteAllNestedFields
+         * Deletes all the nested fields inside a field definition. It works
+         * only with fields of type "object" or "array" (it would not make sense
+         * for fields of elementary types which cannot have nested fields).
+         *
+         * @name deleteAllNestedFields
+         * @function
+         * @param {Object} def The field definition from which to delete all the
+         * nested fields.
+         * @return {undefined}
+         */
+        function deleteAllNestedFields(def) {
+            def.schema = {};
+            def.schema[settings.orderProperty] = [];
+        }
+
+        /*!
          * deleteColumn
          * Deletes a column from an array table, the column being identified
          * using the `$th` table column header argument which is a jQuery
@@ -506,6 +704,7 @@
          * @return {undefined}
          */
         function deleteColumn($th) {
+            var path, name, def;
             // Get the table header row, the one which contains `$th`.
             var $tr = $th.closest("tr");
             // Get the index of the column which contains `$th`.
@@ -522,15 +721,17 @@
             // Also remove the column (field) from the array schema so
             // that the add new field button will work correctly, will
             // not add the deleted field to the new array items.
-            var path = $table.attr("data-json-editor-path");
-            var name = $th.attr("data-json-editor-name");
-            var def = self.getDefinitionAtPath(path);
+            path = $table.attr("data-json-editor-path");
+            name = $th.attr("data-json-editor-name");
+            def = self.getDefinitionAtPath(path);
             // If there is only a single column in the table, its `<th>` will
             // have the `data-json-editor-name` attribute set to an empty
             // string.
             if (name.length > 0) {
+                var order;
+
                 delete def.schema[name];
-                var order = def.schema[settings.orderProperty];
+                order = def.schema[settings.orderProperty];
                 order.splice(order.indexOf(name), 1);
                 // If there remains just one column after removing the selected
                 // column, move the add/delete item buttons inside the single
@@ -542,6 +743,8 @@
                 // Also update the definition of the array to have its only
                 // field's schema directly in the `schema` property.
                 if (order.length === 1) {
+                    var $tfootRow, $tfootInput;
+
                     deleteControlsColumn($table);
 
                     // Update the UI (the table rows in the table body) to
@@ -559,10 +762,10 @@
                         });
                     });
                     // Also update the row in the table footer.
-                    var $tfootRow = $table.find("tfoot > tr");
+                    $tfootRow = $table.find("tfoot > tr");
                     $tfootRow.removeAttr("data-json-editor-path");
                     $tfootRow.removeAttr("data-json-editor-type");
-                    var $tfootInput = $tfootRow.find("[data-json-editor-path]");
+                    $tfootInput = $tfootRow.find("[data-json-editor-path]");
                     $tfootInput.attr("data-json-editor-path", path + ".+");
                     // Also update the row in the table header.
                     $table.find("thead:first > tr:first > th:first")
@@ -571,7 +774,7 @@
                     def.schema = def.schema[order[0]];
                 }
             } else {
-                def.schema = {};
+                removeAllNestedFields(def);
                 addColumnWithControls($table);
             }
         }
@@ -694,11 +897,13 @@
                 return a;
             }
 
-            if (targetDef.type === "object") {
+            // If the type of the target (child) field is not elementary (is
+            // either "object" or "array")
+            if (targetDef.type === "object" || targetDef.type === "array") {
                 // If the parent object `sourceDef` of the field `targetDef` of
-                // type "object" has the `deletableFields` flag set, mark the
-                // field as `deletableFields`, only if `targetDef` does not
-                // already contain the `deletableFields` property.  The same
+                // type "object" or "array" has the `deletableFields` flag set,
+                // mark the field as `deletableFields`, only if `targetDef` does
+                // not already contain the `deletableFields` property. The same
                 // goes for the `editableFields` and `addField` properties.
                 targetDef.deletableFields =
                     f(targetDef.deletableFields, sourceDef.deletableFields);
@@ -717,6 +922,942 @@
                     sourceDef.editableFields);
         }
 
+        /*!
+         * updateAndRenameFieldData
+         * Updates the data of all the fields in the JSON editor which is stored
+         * in `settings.data` variable and is used to fill the edited field
+         * after changing its name. It also renames the field data in the
+         * `settings.data` variable if the new name is differend than the old
+         * name so that the new input group created with the call below to the
+         * `createGroup` method will display the correct data. This function
+         * needs to stay in the scope of the `settings.data` variable and of the
+         * `renameValueAtPath` function to work without errors.
+         *
+         * @name updateAndRenameFieldData
+         * @function
+         * @param {String} oldPath The path to the field before its name was
+         * edited in the current field editor.
+         * @param {String} newName The new name of the field, the one inserted
+         * by the end user in the current field editor before pressing the Save
+         * button. It can be the same as the old name and in this case this
+         * function only updates the data without renaming any field data in the
+         * `settings.data` object.
+         * @return {undefined}
+         */
+        function updateAndRenameFieldData(oldPath, newName) {
+
+            var oldName = self.getNameFromPath(oldPath);
+            // Update the default data used for the edited field's new input
+            // group (which is the DOM representation of the field) and also
+            // updates the default data for all the remaining fields in the JSON
+            // editor, taking the data from the way the input groups are
+            // currently filled in the UI by the end user or by the initial data
+            // offered to the JSON editor constructor.
+            settings.data = self.getData(null, null,
+                    null, true);
+            // If the name (so also the path) of the field has been changed
+            if (newName !== oldName) {
+                // Then replace in the `settings.data` variable the old field
+                // name with the new field name.
+                renameValueAtPath(oldPath, newName);
+            }
+        }
+
+        /*!
+         * createNewFieldEditor
+         * Returns a jQuery object containing a new field editor.
+         *
+         * @name createNewFieldEditor
+         * @function
+         * @param {Object} options An object containing the following
+         * properties:
+         *
+         * - `newFields` (Boolean): True if the new field editor will create new
+         * fields instead of editing existing fields, false otherwise.
+         * - `deletableFields` (Boolean): Whether the fields created by this
+         * field editor will be deletable.
+         * - `editableFields` (Boolean): Whether the fields created by this
+         * field editor will be editable.
+         * - `addFields` (Boolean): Whether the objects created by this field
+         * editor will be capable of receiving new fields created with the user
+         * interface.
+         * - `parent` (jQuery): Optional. The jQuery element which is the direct
+         * parent of all the group elements at the same level as the new field
+         * editor destination in the UI and has the `data-json-editor-path`
+         * attribute set to the correct path. If it is not set or it does not
+         * have this attribute set, the `self.container` element and an empty
+         * path string will be used.
+         * - `editedGroup` (jQuery): Optional. The jQuery element representing
+         * the field which is edited by the newly created field editor. It is
+         * required only when `newFields` is set to `false`.
+         *
+         * @return {jQuery} The newly created field editor.
+         */
+        function createNewFieldEditor(options) {
+            var $parent, path, $div, $nameInput, $possibleValuesSelect,
+                $possibleValuesDiv, $checkboxPossibleValues,
+                $possibleValuesLabel, $typeSelect, $labelInput,
+                $possibleValueInput, $addPossibleValueButton,
+                $deletePossibleValueButton, $editedInput, $addFieldButton,
+                $label, formTitle;
+
+            /*!
+             * nameAlreadyExists
+             * A function that determines whether the given name already exists
+             * in a field under the path in which the user tries to create a new
+             * field.
+             *
+             * @name nameAlreadyExists
+             * @function
+             * @param {String} name The name of the field to search for.
+             * @return {Boolean} True if the name already exists, false
+             * otherwise.
+             */
+            function nameAlreadyExists(name) {
+                // If the field editor is not in a table (or, with other words,
+                // it is in an object).
+                if (!$parent.is("table")) {
+                    // Obtain the data at the path where the new field is
+                    // created.
+                    var data = self.getData(path, $parent);
+
+                    // Return true if the given name is already in the data,
+                    // otherwise return false.
+                    return Object.keys(data).indexOf(name) > -1;
+                }
+                var def = self.getDefinitionAtPath(path);
+                // Handle empty schemas (arrays without any fields).
+                if (hasEmptySchema(def)) {
+                    return false;
+                }
+                var sch = def.schema;
+                // If the schema `sch` contains a single field
+                if (typeof sch.type === "string") {
+                    return name === (sch.name ||
+                            settings.defaultArrayFieldName);
+                }
+                // else if `sch` contains multiple fields
+                return sch[settings.orderProperty].indexOf(name) > -1;
+            }
+
+            $parent = options.parent && options.parent.length > 0 ?
+                options.parent : self.container;
+            path = $parent.attr("data-json-editor-path") || "";
+
+            $div = $("<div>", {
+                class: "json-editor-" + (options.newFields ? "new" : "edit") +
+                    "-field-form"
+            });
+
+            $nameInput = $("<input>", {
+                type: "text",
+                class: "json-editor-field-name"
+            });
+
+            $possibleValuesSelect = $("<select>", {
+                multiple: "multiple",
+                class: "json-editor-field-possible-values"
+            });
+
+            $possibleValuesDiv = $("<div>", {
+                css: {
+                    display: "none"
+                },
+                class: "json-editor-possible-values-section"
+            });
+
+            $checkboxPossibleValues = $("<input>", {
+                type: "checkbox",
+                on: {
+                    change: function (e) {
+                        $possibleValuesDiv.toggle(this.checked);
+                    }
+                },
+                class: "json-editor-field-enable-possible-values"
+            });
+
+            $possibleValuesLabel = $("<label>")
+                .text("Enable possible values: ")
+                .append($checkboxPossibleValues);
+
+            // This jQuery element is the <select> (combo box) input inside the
+            // field editor with which the end user selects the type of the
+            // created/edited (see the `options.newFields` variable) field.
+            $typeSelect = $("<select>", {
+                on: {
+                    change: function () {
+                        var type = $(this).val();
+                        if (type === "object" || type === "array") {
+                            // A field of type "object" or "array" (so all the
+                            // types that are not elementary) cannot have possible
+                            // values, so we show the possible values controls
+                            // only for fields of type different than "object"
+                            // and "array", elementary types (date, string etc.).
+                            $possibleValuesLabel.add($possibleValuesDiv).hide();
+                        } else {
+                            // Create a new input for the newly selected field
+                            // type from `$typeSelect`.
+                            var $clone = JsonEdit.inputs[type].clone()
+                                .attr("data-json-editor-type", type);
+                            // Replace the `$possibleValueInput` input with the
+                            // newly created input.
+                            $possibleValueInput.replaceWith($clone);
+                            $possibleValueInput = $clone;
+                            // Set the default value for the selected type to
+                            // the newly created input.
+                            self.setValueToElement($possibleValueInput,
+                                    getDefaultValueForType(type));
+                            // Clear the list of possible values entered by the
+                            // user (it wouldn't make sense to keep them since
+                            // the type of the possible values has been
+                            // changed).
+                            $possibleValuesSelect.empty();
+
+                            // A field of type "object" or "array" cannot have
+                            // possible values, so we show the possible values
+                            // controls only for fields of type different than
+                            // "object" and "array", for fields of elementary
+                            // types.
+                            $possibleValuesLabel.show();
+                            $possibleValuesDiv.toggle($checkboxPossibleValues
+                                    .is(":checked"));
+                        }
+                    }
+                },
+                class: "json-editor-field-type"
+            });
+            for (var i = 0; i < knownElementaryFieldTypes.length; i++) {
+                $typeSelect.append($("<option>", {
+                    value: knownElementaryFieldTypes[i],
+                    text: knownElementaryFieldTypes[i]
+                }));
+            }
+            $typeSelect.append($("<option>", {
+                value: "object",
+                text: "object"
+            }), $("<option>", {
+                value: "array",
+                text: "array"
+            }));
+
+            $labelInput = $("<input>", {
+                type: "text",
+                class: "json-editor-field-label"
+            });
+
+            $possibleValueInput = $("<input>", {
+            });
+
+            $addPossibleValueButton = $("<input>", {
+                type: "button",
+                value: "+ Add possible value",
+                class: "json-editor-add-possible-value-button",
+                on: {
+                    click: function () {
+                        var val = self.getValueFromElement($possibleValueInput);
+                        var text = JsonEdit.converters.string(val);
+                        // See the explanation in the `createGroup` method,
+                        // `field.possible` if branch, for the reason why we do
+                        // not use `JsonEdit.converters.string` for the `value`
+                        // attribute of the `<option>` element.
+                        $possibleValuesSelect.append($("<option>", {
+                            value: val.toString(),
+                            text: text
+                        }));
+                    }
+                }
+            });
+
+            $deletePossibleValueButton = $("<input>", {
+                type: "button",
+                value: "× Delete selected possible values",
+                class: "json-editor-delete-possible-value-button",
+                on: {
+                    click: function () {
+                        $possibleValuesSelect.children("option:selected").remove();
+                    }
+                }
+            });
+
+            $addFieldButton = $("<input>", {
+                type: "button",
+                value: (options.newFields ? "+ Add" : "💾 Save") + " field",
+                class: "json-editor-add-field-button",
+                on: {
+                    click: function () {
+                        var name, label, type, inTable, newFieldDef,
+                            definition, sch;
+
+                        // Remove dots from the name and remove the whitespace
+                        // around it.
+                        $nameInput.val($nameInput.val()
+                                .replace(/\./g, "").trim());
+                        // Remove the whitespace around the label.
+                        $labelInput.val($labelInput.val().trim());
+
+                        name = $nameInput.val();
+                        // The default label is the name of the field.
+                        label = $labelInput.val() || name;
+
+                        // Validate the name. It should not be a duplicate, it
+                        // should be different than "+" and not an empty string.
+                        if (name === "+" || name.length === 0 ||
+                                nameAlreadyExists(name)) {
+                            alert(settings.messages.INVALID_FIELD_NAME
+                                    .replace(/\{0\}/g, path));
+                            return;
+                        }
+
+                        type = $typeSelect.val();
+                        inTable = $parent.is("table");
+
+                        // Build the field definition of the new or modified
+                        // field.
+                        newFieldDef = {
+                            name: name,
+                            label: label,
+                            type: type,
+                            path: (path ? path + "." : "") + name
+                        };
+                        inheritField(newFieldDef, {
+                            addField: options.addFields,
+                            deletableFields: options.deletableFields,
+                            editableFields: options.editableFields,
+                            deletable: options.deletableFields,
+                            editable: options.editableFields
+                        });
+                        // Get the schema of the array/object field definition
+                        // that is the parent of the new/edited field.
+                        definition = self.getDefinitionAtPath(path);
+                        sch = definition.schema;
+                        // The type can be "object", "array" or an elementary
+                        // type (string, date etc.). See the
+                        // `knownElementaryFieldTypes` variable for the
+                        // elementary types.
+                        if (type === "object") {
+                            deleteAllNestedFields(newFieldDef);
+
+                            // If the field editor is inside a table
+                            if (inTable) {
+                                // If the array currently has a single field
+                                if (typeof sch.type === "string") {
+                                    // If a new field is created
+                                    if (options.newFields) {
+                                        // TODO: Not yet implemented.
+                                    // else if an existing field is edited
+                                    } else {
+                                        // TODO: Not yet implemented.
+                                    }
+                                // If the array currently has no fields
+                                } else if (hasEmptySchema(definition)) {
+                                    // If a new field is created
+                                    if (options.newFields) {
+                                        // TODO: Not yet implemented.
+                                    // else if an existing field is edited
+                                    } else {
+                                        alert(settings.messages.
+                                                EDIT_FIELD_IN_ARRAY_WITHOUT_FIELDS);
+                                    }
+                                // If the array currently has at least two
+                                // fields
+                                } else {
+                                    // If a new field is created
+                                    if (options.newFields) {
+                                        // TODO: Not yet implemented.
+                                    // else if an existing field is edited
+                                    } else {
+                                        // TODO: Not yet implemented.
+                                    }
+                                }
+                            // else if not in a table but in an object
+                            } else { // !inTable
+                                var order = sch[settings.orderProperty];
+                                // If a new field is created
+                                if (options.newFields) {
+                                    // A new field of type object is added to an
+                                    // object.
+                                    order.push(name);
+                                    // Insert the new field definition in the
+                                    // `settings.schema` variable.
+                                    sch[name] = newFieldDef;
+                                // else if an existing field is edited
+                                } else {
+                                    // A field of type object or other type is
+                                    // edited to become a field of type object.
+                                    // The field is inside an object.
+                                    var _path = $editedInput.attr(
+                                            "data-json-editor-path");
+                                    var oldName = self.getNameFromPath(_path);
+                                    // Keep the schema of the old field
+                                    // definition (the fields in the object) in
+                                    // the new field definition because the
+                                    // field of type "object" is just edited
+                                    // (this means that only its name/path and
+                                    // label could be changed, not the fields in
+                                    // it).
+                                    newFieldDef.schema = sch[oldName].schema;
+
+                                    // Also change the paths of the descendant
+                                    // field definitions. For example if `_path`
+                                    // is "first.second" (`oldName` is "second")
+                                    // and `name` is "third", the new path of
+                                    // the field will be "first.third" and lets
+                                    // say that the schema of this field
+                                    // contains a string field with path
+                                    // "first.second.test". After changing the
+                                    // path from "first.second" to
+                                    // "first.third", this string field should
+                                    // also change its path from
+                                    // "first.second.test" to
+                                    // "first.third.test".
+                                    updateDescendantDefPaths(newFieldDef);
+
+                                    // Insert the new field definition in the
+                                    // `settings.schema` variable.
+                                    sch[name] = newFieldDef;
+
+                                    // If the name (so also the path) of the
+                                    // field has been changed, replace the old
+                                    // name with the new name in the order array
+                                    // and delete the old field definition with
+                                    // the old name from the schema.
+                                    if (name !== oldName) {
+                                        order[order.indexOf(oldName)] = name;
+                                        delete sch[oldName];
+                                    }
+
+                                    updateAndRenameFieldData(_path, name);
+                                }
+
+                                // Create and show the UI for the field
+                                // definition and add it before the field
+                                // editor.
+                                $div.before(self.createGroup(newFieldDef));
+                            }
+                        // the new field has the type "array"
+                        } else if (type === "array") {
+                            deleteAllNestedFields(newFieldDef);
+
+                            // If the field editor is inside a table
+                            if (inTable) {
+                                // If the parent array currently has a single
+                                // field
+                                if (typeof sch.type === "string") {
+                                    // If a new field is created
+                                    if (options.newFields) {
+                                        // TODO: Not yet implemented.
+                                    // else if an existing field is edited
+                                    } else {
+                                        // TODO: Not yet implemented.
+                                    }
+                                // If the parent array currently has no fields
+                                } else if (hasEmptySchema(definition)) {
+                                    // If a new field is created
+                                    if (options.newFields) {
+                                        // TODO: Not yet implemented.
+                                    // else if an existing field is edited
+                                    } else {
+                                        alert(settings.messages.
+                                                EDIT_FIELD_IN_ARRAY_WITHOUT_FIELDS);
+                                    }
+                                // If the parent array currently has at least
+                                // two fields
+                                } else {
+                                    // If a new field is created
+                                    if (options.newFields) {
+                                        // TODO: Not yet implemented.
+                                    // else if an existing field is edited
+                                    } else {
+                                        // TODO: Not yet implemented.
+                                    }
+                                }
+                            // else if not in a table but in an object
+                            } else { // !inTable
+                                var order = sch[settings.orderProperty];
+                                // If a new field is created
+                                if (options.newFields) {
+                                    // A new field of type array is added to an
+                                    // object.
+                                    order.push(name);
+                                    // Insert the new field definition in the
+                                    // `settings.schema` variable.
+                                    sch[name] = newFieldDef;
+                                // else if an existing field is edited
+                                } else {
+                                    var _path = $editedInput
+                                        .attr("data-json-editor-path");
+                                    // A field of type array, object or other
+                                    // type is edited to become a field of type
+                                    // array. The field is inside an object.
+                                    var oldName = self.getNameFromPath(_path);
+                                    // Keep the schema of the old field
+                                    // definition (the fields in the array) in
+                                    // the new field definition because the
+                                    // field of type "array" is just edited
+                                    // (this means that only its name/path and
+                                    // label could be changed, not the fields in
+                                    // it).
+                                    newFieldDef.schema = sch[oldName].schema;
+
+                                    // Also change the paths of the descendant
+                                    // field definitions. For example if `_path`
+                                    // is "first.second" (`oldName` is "second")
+                                    // and `name` is "third", the new path of
+                                    // the field will be "first.third" and lets
+                                    // say that the schema of this field
+                                    // contains a string field with path
+                                    // "first.second.test". After changing the
+                                    // path from "first.second" to
+                                    // "first.third", this string field should
+                                    // also change its path from
+                                    // "first.second.test" to
+                                    // "first.third.test".
+                                    updateDescendantDefPaths(newFieldDef);
+
+                                    // Insert the new field definition in the
+                                    // `settings.schema` variable.
+                                    sch[name] = newFieldDef;
+                                    // If the name (so also the path) of the
+                                    // field has been changed, replace the old
+                                    // name with the new name in the order array
+                                    // and delete the old field definition with
+                                    // the old name from the schema.
+                                    if (name !== oldName) {
+                                        order[order.indexOf(oldName)] = name;
+                                        delete sch[oldName];
+                                    }
+
+                                    updateAndRenameFieldData(_path, name);
+                                }
+
+                                // Create and show the UI for the field
+                                // definition and add it before the field
+                                // editor.
+                                $div.before(self.createGroup(newFieldDef));
+                            }
+                        // type is an elementary type (not "object" or "array")
+                        } else {
+                            newFieldDef.data = getDefaultValueForType(type);
+
+                            // If the possible values checkbox is enabled, add the
+                            // entered possible values to the field definition.
+                            if ($checkboxPossibleValues.prop("checked")) {
+                                var possibleValues = [];
+                                var converter = self.converters[newFieldDef.type];
+                                $possibleValuesSelect.children("option").each(
+                                    function (i, e) {
+                                        possibleValues.push(converter($(e).val()));
+                                    });
+                                newFieldDef.possible = possibleValues;
+                            }
+
+                            // If the field editor is inside a table
+                            if (inTable) {
+                                function createNewCellEditor(indexString) {
+                                    var path2, sch2;
+                                    path2 = (path ? path + "." : "") + indexString;
+                                    // From the 3 possibilities: no field, one field
+                                    // or many fields in the schema of the array
+                                    // before the addition of the new column, the
+                                    // name should be added to the path only when
+                                    // the schema already contains one or more
+                                    // fields. When it does not contain any fields,
+                                    // the new field will be alone and its data will
+                                    // be accessed directly from the only input in
+                                    // that row.
+                                    if (!hasEmptySchema(definition)) {
+                                        path2 += "." + name;
+                                    }
+                                    sch2 = $.extend(true, {}, newFieldDef, {
+                                        path: path2
+                                    });
+                                    delete sch2.label;
+                                    delete sch2.deletable;
+                                    delete sch2.editable;
+                                    return $("<td>").append(self.createGroup(sch2));
+                                }
+
+                                /*!
+                                 * addNewColumn
+                                 * Creates and shows the UI for the new column in
+                                 * the table. First adds a table column header then
+                                 * adds empty inputs under it.
+                                 *
+                                 * @name addNewColumn
+                                 * @function
+                                 * @param {jQuery} $table The table element in which
+                                 * to add the new column.
+                                 * @param {Object} newDef The field definition of
+                                 * the new column.
+                                 */
+                                function addNewColumn($table, newDef) {
+                                    var $trs = $table.find("tbody > tr");
+                                    var $tds, $cellEditor, $tfootRow;
+                                    // First add the column header.
+                                    $table.find("thead > tr:first > th:last")
+                                        .before(createColumnHeader(newDef));
+                                    // For each row in the table body.
+                                    for (var i = 0; i < $trs.length; i++) {
+                                        var $tr = $trs.eq(i);
+                                        // Create a new cell editor.
+                                        $cellEditor = createNewCellEditor(i.toString());
+                                        $tds = $tr.children("td");
+                                        // If there are cells in the row, put the
+                                        // cell editor before the last cell.
+                                        if ($tds.length > 0) {
+                                            $tds.eq(-1).before($cellEditor);
+                                        // Else append the cell editor to the row.
+                                        } else {
+                                            $tr.append($cellEditor);
+                                        }
+                                    }
+                                    // Do the same for the table footer row.
+                                    $tfootRow = $table.find("tfoot > tr:first");
+                                    $tds = $tfootRow.children("td");
+                                    $cellEditor = createNewCellEditor("+");
+                                    if ($tds.length > 0) {
+                                        $tds.eq(-1).before($cellEditor);
+                                    } else {
+                                        $tfootRow.append($cellEditor);
+                                    }
+                                }
+
+                                // If the schema is not an object with multiple
+                                // fields or an empty object, but a single field,
+                                if (typeof sch.type === "string") {
+                                    // and if the current field editor just creates new
+                                    // fields (so it does not edit existing fields),
+                                    if (options.newFields) {
+                                        var $tfootRow, $tfootInput;
+
+                                        // move the old single field inside a larger
+                                        // schema which also contains the newly created
+                                        // field.
+                                        var nameOfTheSingleOldField = sch.name ||
+                                            settings.defaultArrayFieldName;
+                                        definition.schema = {};
+                                        definition.schema[settings.orderProperty] =
+                                            [nameOfTheSingleOldField, name];
+                                        definition.schema[nameOfTheSingleOldField] =
+                                            sch;
+                                        definition.schema[name] = newFieldDef;
+                                        sch = definition.schema;
+
+                                        schemaCoreFields(sch, definition.path +
+                                                ".");
+                                        // The call to `schemaCoreFields` also sets
+                                        // the label to the name
+                                        // `settings.defaultArrayFieldName` in some
+                                        // cases, but we can do better, we set it to
+                                        // `settings.defaultArrayFieldLabel` if
+                                        // `sch` does not have a name set.
+                                        sch[nameOfTheSingleOldField].label =
+                                            sch.name ||
+                                            settings.defaultArrayFieldLabel;
+
+                                        // Update the UI (the table rows in the
+                                        // table body) to represent the new
+                                        // field definition which now contains a
+                                        // new field in its schema.
+                                        $parent.find("tbody > tr").each(
+                                                function (i, e) {
+                                            var $e = $(e);
+                                            $e.attr({
+                                                "data-json-editor-path":
+                                                    definition.path + "." + i,
+                                                "data-json-editor-type": "object"
+                                            });
+                                            $e.find("[data-json-editor-path]")
+                                                    .each(function (ii, ee) {
+                                                var $ee = $(ee);
+                                                var p = $ee
+                                                    .attr("data-json-editor-path");
+                                                $ee.attr("data-json-editor-path",
+                                                        p + "." +
+                                                        nameOfTheSingleOldField);
+                                            });
+                                        });
+                                        // Also update the row in the table footer.
+                                        $tfootRow = $parent.find("tfoot > tr");
+                                        $tfootRow.attr({
+                                            "data-json-editor-path":
+                                                definition.path + ".+",
+                                            "data-json-editor-type": "object"
+                                        });
+                                        $tfootInput = $tfootRow.find("[data-json-editor-path]");
+                                        $tfootInput.attr("data-json-editor-path",
+                                                $tfootInput.attr("data-json-editor-path") +
+                                                "." + nameOfTheSingleOldField);
+                                        // Also update the row in the table header.
+                                        $parent.find("thead:first > tr:first > th:first")
+                                            .attr("data-json-editor-name",
+                                                    nameOfTheSingleOldField);
+
+                                        // Delete the controls from the only column
+                                        // of the table because they will be added
+                                        // in a new column.
+                                        $parent.find("tr > td:nth-child(1) [data-json-editor-control]")
+                                            .remove();
+
+                                        // Add a new column with controls (add,
+                                        // delete).
+                                        addColumnWithControls($parent);
+
+                                        addNewColumn($parent, newFieldDef);
+                                    } else {
+                                        // TODO: The only field in the table is being
+                                        // edited. Not yet implemented.
+                                    }
+                                // else if the schema is empty (the array has no
+                                // fields)
+                                } else if (hasEmptySchema(definition)) {
+                                    // A new field/column is added to a table
+                                    // without fields/columns.
+                                    if (options.newFields) {
+                                        // The new column should not have the
+                                        // attribute `data-json-editor-name` set in
+                                        // the column header, so we clone the schema
+                                        // object and remove the name and path
+                                        // properties from it.
+                                        var def = $.extend(true, {}, newFieldDef);
+                                        delete def.name;
+                                        delete def.path;
+
+                                        // Add the new column before deleting
+                                        // the controls column because
+                                        // `deleteControlsColumn` puts the
+                                        // controls in the last column after
+                                        // removing the controls column, and
+                                        // that last column exists only after
+                                        // calling the `addNewColumn` function.
+                                        // Add the new column before updating
+                                        // the schema of the array because the
+                                        // `addNewColumn` function uses the old
+                                        // schema when calling the
+                                        // `createNewCellEditor` function.
+                                        addNewColumn($parent, def);
+
+                                        // Update the schema of the array.
+                                        definition.schema = newFieldDef;
+
+                                        deleteControlsColumn($parent);
+                                    // Else an existing field/column is edited in a
+                                    // table without fields/columns.
+                                    } else {
+                                        alert(settings.messages.
+                                                EDIT_FIELD_IN_ARRAY_WITHOUT_FIELDS);
+                                    }
+                                // else if the schema contains multiple fields
+                                } else {
+                                    // A new field is added to a table with multiple
+                                    // fields.
+                                    if (options.newFields) {
+                                        // First update the schema.
+                                        sch[settings.orderProperty].push(name);
+                                        sch[name] = newFieldDef;
+
+                                        addNewColumn($parent, newFieldDef);
+                                    // Else an existing field is edited in a table
+                                    // with multiple fields.
+                                    } else {
+                                        // TODO: Not yet implemented.
+                                    }
+                                }
+
+                            // else if not in a table but in an object
+                            } else {
+                                var order = sch[settings.orderProperty];
+                                // in the `settings.schema` variable store the
+                                // field definition without the (default) data.
+                                var newFieldDefWithoutData = $.extend(true, {},
+                                        newFieldDef);
+                                delete newFieldDefWithoutData.data;
+                                // if a new field is created
+                                if (options.newFields) {
+                                    order.push(name);
+                                // else if an existing field is edited
+                                } else {
+                                    var _path = $editedInput
+                                        .attr("data-json-editor-path");
+                                    var oldName = self.getNameFromPath(_path);
+                                    delete sch[oldName];
+                                    order[order.indexOf(oldName)] = name;
+                                    updateAndRenameFieldData(_path, name);
+                                }
+                                sch[name] = newFieldDefWithoutData;
+
+                                // Create and show the UI for the field
+                                // definition and add it before the field
+                                // editor.
+                                $div.before(self.createGroup(newFieldDef));
+                            }
+                        }
+
+                        // If this editor does not create new fields (it just
+                        // edits an existing field), after the UI is created
+                        // above, remove the field editor and the old field UI
+                        // from the document.
+                        if (!options.newFields) {
+                            options.editedGroup.remove();
+                            $div.remove();
+                            return;
+                        }
+
+                        // If this editor creates new fields, it should not be
+                        // removed from the UI after submitting, so we reset its
+                        // values to the default ones.
+                        $nameInput.add($labelInput, $typeSelect,
+                                $possibleValueInput).val(null);
+                        $possibleValuesSelect.empty();
+                        $checkboxPossibleValues.prop("checked", false)
+                            .trigger("change");
+                        $typeSelect.trigger("change");
+                    }
+                }
+            });
+
+            // Call this handler to update the possible value input to the
+            // correct type and to clear the possible values list before the
+            // possible values from the old schema are inserted in it below.
+            $typeSelect.trigger("change");
+
+            // If this condition is met, `options.editedGroup` is a valid jQuery
+            // element.
+            if (!options.newFields) {
+                var fieldPath, oldDef;
+
+                // If the edited group's jQuery element has the attribute
+                // "data-json-editor-path" set, it is the UI of a field with the
+                // type "object", so the edited input jQuery element is that
+                // jQuery element. If that attribute is not set, it is the UI of
+                // a field with a type different than "object", so the edited
+                // input jQuery element is the descendant of the edited group's
+                // jQuery element with that attribute set.
+                var isObject = typeof options.editedGroup
+                    .attr("data-json-editor-path") !== "undefined";
+                if (isObject) {
+                    $editedInput = options.editedGroup;
+                } else {
+                    $editedInput = options.editedGroup
+                        .find("[data-json-editor-path]");
+                }
+
+                fieldPath = $editedInput.attr("data-json-editor-path");
+                oldDef = self.getDefinitionAtPath(fieldPath);
+
+                $typeSelect.val(oldDef.type)
+                    .trigger("change");
+                $nameInput.val(oldDef.name);
+                $labelInput.val(oldDef.label);
+                if (isObject && oldDef.possible) {
+                    $checkboxPossibleValues.prop("checked", true)
+                        .trigger("change");
+                    for (var i = 0; i < oldDef.possible.length; i++) {
+                        var val = oldDef.possible[i];
+                        var text = JsonEdit.converters.string(val);
+                        // See the explanation in the `createGroup` method,
+                        // `field.possible` if branch, for the reason why we do
+                        // not use `JsonEdit.converters.string` for the `value`
+                        // attribute of the `<option>` element.
+                        $possibleValuesSelect.append($("<option>", {
+                            value: val.toString(),
+                            text: text
+                        }));
+                    }
+                }
+            }
+
+            $label = $("<label>");
+            if (!$parent.is("table")) {
+                $label.append($("<hr>"));
+            }
+            formTitle = (options.newFields ? "Add" : "Edit") + " field";
+            $div.append($("<form>").append($label.append(
+                    $("<strong>").text(formTitle),
+                    $("<br>"),
+                    $("<label>").text("Name: ").append($nameInput),
+                    $("<label>").text("Type: ").append($typeSelect),
+                    $("<label>")
+                        .text("Label (optional, without final semicolon): ")
+                        .append($labelInput),
+                    $("<br>"),
+                    $possibleValuesLabel,
+                    $possibleValuesDiv.append($possibleValuesSelect,
+                        $possibleValueInput, $addPossibleValueButton,
+                        $deletePossibleValueButton),
+                    $addFieldButton)));
+
+            // If this is an editor for an existing field,
+            if (!options.newFields) {
+                // also show a Cancel button.
+                $label.append($("<input>", {
+                    type: "button",
+                    value: "Cancel",
+                    on: {
+                        click: function () {
+                            // There is an edited field which should be marked
+                            // as not being edited anymore.
+                            $editedInput.removeClass("json-editor-edited");
+                            // Delete the field editor from the document.
+                            $div.remove();
+                        }
+                    }
+                }));
+            }
+
+            return $div;
+        }
+
+        /*!
+         * setValueAtPath
+         * Sets the value of the field at `fieldPath` path in the
+         * `settings.data` variable.
+         *
+         * @name setValueAtPath
+         * @function
+         * @param {String} fieldPath The path at which to put the `value`.
+         * @param {Object} value The value to put at `fieldPath` path.
+         * @return {undefined}
+         */
+        function setValueAtPath(fieldPath, value) {
+            putValue(settings.data, fieldPath, value);
+        }
+
+        /*!
+         * renameValueAtPath
+         * Renames the value of the field at `fieldPath` path in the
+         * `settings.data` variable to the name specified in the `newName`
+         * argument. For example, if `fieldPath` is "first.second.third" and
+         * `newName` is "test", after calling this function the value that
+         * before was found at the "first.second.third" path will now be found
+         * at the path "first.second.test".
+         *
+         * @name renameValueAtPath
+         * @function
+         * @param {String} fieldPath The path at which to put the `value`.
+         * @param {Object} value The value to put at `fieldPath` path.
+         * @return {undefined}
+         */
+        function renameValueAtPath(fieldPath, newName) {
+            setValueAtPath(self.setNameInPath(fieldPath, newName),
+                    self.getValue(fieldPath));
+            deleteValueAtPath(fieldPath);
+        }
+
+        /*!
+         * deleteValueAtPath
+         * Deletes the value of the field at `fieldPath` path in the
+         * `settings.data` variable.
+         *
+         * @name deleteValueAtPath
+         * @function
+         * @param {String} fieldPath The path at which to delete the value.
+         * @return {undefined}
+         */
+        function deleteValueAtPath(fieldPath) {
+            deleteValue(settings.data, fieldPath);
+        }
+
         /**
          * createGroup
          * Creates a form group and returns the jQuery object.
@@ -727,12 +1868,13 @@
          * @return {jQuery} The jQuery object form.
          */
         self.createGroup = function (field) {
+            var $group, $label, $labelContainer, fieldData, $input;
 
             // Create form group
-            var $group = self.groups[field.type].clone(true);
+            $group = self.groups[field.type].clone(true);
 
             // TODO Configurable
-            var $label = self.labels[field.type].clone(true).text(field.label);
+            $label = self.labels[field.type].clone(true).text(field.label);
             if (findValue(field, "_edit.key")) {
                 $label = self.inputs.string.clone(true).val(field.label);
                 $label.attr({
@@ -742,7 +1884,7 @@
             }
 
             // Add label
-            var $labelContainer = $group.find("label");
+            $labelContainer = $group.find("label");
             // In fields of type "array" there is no <label> element because it
             // would trigger a click event on buttons inside the table headers
             // when clicking anywhere on the table.
@@ -751,10 +1893,10 @@
             }
             $labelContainer.append($label);
 
-            var fieldData = field.data === undefined ? self.getValue(field.path) : field.data;
+            fieldData = field.data === undefined ? self.getValue(field.path) : field.data;
 
             // Add input
-            var $input = null;
+            $input = null;
             if (field.possible) {
                 // If the field data is not specified, use a default value.
                 if (typeof fieldData === "undefined") {
@@ -793,17 +1935,20 @@
                 // Set the selected value to the one in `fieldData`.
                 $input.val(fieldData);
             } else if (field.type == "array") {
+                var $thead, $tfoot, $tbody, $headers, $footers, headers, $ths,
+                    $tdfs, $addButton;
+
                 // If the field data is not specified, use a default value.
                 if (typeof fieldData === "undefined") {
                     fieldData = [];
                 }
 
                 // TODO Configurable
-                var $thead = null;
-                var $tfoot = null;
-                var $tbody = null;
-                var $headers = null;
-                var $footers = null;
+                $thead = null;
+                $tfoot = null;
+                $tbody = null;
+                $headers = null;
+                $footers = null;
                 $input = $("<table>", {
                     "border": "1",
                     "data-json-editor-path": field.path,
@@ -816,21 +1961,25 @@
 
 
                 $headers = $thead.children("tr");
-                var headers = [];
+                headers = [];
                 // headers
-                var $ths = [];
+                $ths = [];
+                // If the schema of the array contains a single field
                 if (typeof Object(field.schema).type === "string") {
+                    var $th;
                     var sch = field.schema;
                     headers.push(sch.name);
                     if (typeof field.deletableFields === "boolean") {
                         sch = $.extend(true, {}, sch);
                         sch.deletable = field.deletableFields;
                     }
-                    var $th = createColumnHeader(sch);
+                    $th = createColumnHeader(sch);
                     $ths.push($th);
-                } else {
+                // Else if the schema of the array contains more than one field
+                } else if (!hasEmptySchema(field)) {
                     var order = field.schema[settings.orderProperty];
                     for (var i = 0; i < order.length; i++) {
+                        var $th;
                         var k = order[i];
                         var sch = field.schema[k];
                         headers.push(sch.name);
@@ -838,9 +1987,12 @@
                             sch = $.extend(true, {}, sch);
                             sch.deletable = field.deletableFields;
                         }
-                        var $th = createColumnHeader(sch);
+                        $th = createColumnHeader(sch);
                         $ths.push($th);
                     }
+                // Else if the schema of the array does not contain any fields
+                } else {
+                    // Don't do anything.
                 }
                 if (field.addField) {
                     $ths.push($("<th>").append(createNewFieldEditor({
@@ -855,10 +2007,14 @@
 
                 // footers (with add new item controls)
                 $footers = $tfoot.children("tr");
-                var $tdfs = [];
-                var $addButton = createAddButton($input);
+                // An array which will contain all the <td> jQuery elements that
+                // should be added to the table footer row in the <tfoot>
+                // section of the table.
+                $tdfs = [];
+                $addButton = createAddButton($input);
                 // TODO: maybe we should use self.add here too after extending
                 // it a bit, in both branches of the `if` structure:
+                // If the array schema contains a single field
                 if (typeof Object(field.schema).type === "string") {
                     var $td = $("<td>");
                     var sch = field.schema;
@@ -867,8 +2023,10 @@
                         // special path for the new edited item:
                         path: field.path + ".+"
                     }))));
+                    // Add the add item button to the single <td> in this row.
                     $td.append($addButton);
-                } else {
+                // Else if the array schema contains at least two fields
+                } else if (!hasEmptySchema(field)) {
                     for (var i = 0; i < headers.length; ++i) {
                         var sch = field.schema[headers[i]];
                         // special path for the new edited item:
@@ -887,6 +2045,10 @@
                         }))));
                     }
                     $tdfs.push($("<td>").append($addButton));
+                // Else if the array schema is empty, it does not contain fields
+                } else {
+                    // Just add a table cell with the add item button.
+                    $tdfs.push($("<td>").append($addButton));
                 }
                 $footers.append($tdfs);
 
@@ -895,6 +2057,7 @@
                 }
 
             } else if (field.type === "object") {
+                var order;
                 // The path attribute is read from the `createNewFieldEditor`
                 // function and the type attribute is read from the `setData`
                 // and `getData` methods.
@@ -904,7 +2067,7 @@
                 });
 
                 $input = [];
-                var order = field.schema[settings.orderProperty];
+                order = field.schema[settings.orderProperty];
                 for (var i = 0; i < order.length; i++) {
                     var k = order[i];
                     var cField = field.schema[k];
@@ -952,6 +2115,7 @@
                     value: "× Delete field",
                     on: {
                         click: function () {
+                            var sch, order;
                             // When the Delete field button is clicked, remove
                             // the group element from the document (the group
                             // element contains the input element and the Delete
@@ -961,9 +2125,9 @@
                             // variable. First get the schema of the path
                             // created by removing the last segment of
                             // `field.path`.
-                            var sch = self.getDefinitionAtPath(field.path
-                                    .split(".").slice(0, -1).join(".")).schema;
-                            var order = sch[settings.orderProperty];
+                            sch = self.getDefinitionAtPath(field.path.split(".")
+                                    .slice(0, -1).join(".")).schema;
+                            order = sch[settings.orderProperty];
                             order.splice(order.indexOf(field.name), 1);
                             delete sch[field.name];
                         }
@@ -976,6 +2140,7 @@
                     value: "✎ Edit field",
                     on: {
                         click: function () {
+                            var $editor;
                             // This class, `json-editor-edited`, indicates that
                             // the field is being edited (with an editor created
                             // with the `createNewFieldEditor` function) and is
@@ -989,7 +2154,7 @@
                                 $group.find("[data-json-editor-path]")
                                     .addClass("json-editor-edited");
                             }
-                            var $editor = createNewFieldEditor({
+                            $editor = createNewFieldEditor({
                                 newFields: false,
                                 // It is possible that this field editor will
                                 // create objects. This property specifies
@@ -1035,15 +2200,17 @@
          * @return {Object} The definition of the field at the specified path.
          */
         self.getDefinitionAtPath = function (path) {
+            var fieldPathParts, currentPart, currentVal;
+
             if (path.length === 0) {
                 return {
                     schema: settings.schema
                 };
             }
 
-            var fieldPathParts = path.split(".");
-            var currentPart = fieldPathParts[0];
-            var currentVal = settings.schema[currentPart];
+            fieldPathParts = path.split(".");
+            currentPart = fieldPathParts[0];
+            currentVal = settings.schema[currentPart];
             for (var i = 1; i < fieldPathParts.length; i++) {
                 currentPart = fieldPathParts[i];
                 currentVal = currentVal.schema[currentPart];
@@ -1063,6 +2230,25 @@
          */
         self.getNameFromPath = function (path) {
             return path.split(".").pop();
+        };
+
+        /**
+         * setNameInPath
+         * Sets the name part (which is the substring after the last "."
+         * character) in the given field path and returns the new path.
+         *
+         * @name setNameInPath
+         * @function
+         * @param {String} path Required, the path in which to replace the old
+         * name with the new given name
+         * @param {String} newName Required, the new name to put in the `path`.
+         * @return {String} The new path which has the name part as the
+         * `newName`.
+         */
+        self.setNameInPath = function (path, newName) {
+            var parts = path.split(".");
+            parts[parts.length - 1] = newName;
+            return parts.join(".");
         };
 
         /**
@@ -1092,6 +2278,7 @@
                 var $tr = $(tr);
                 var $firstElementWithPath = $tr
                     .find("[data-json-editor-path]:first");
+                var currentIndex;
                 // If there is no element with path in this row, it means that
                 // this row does not have cells for any column so we can skip
                 // it.
@@ -1099,7 +2286,7 @@
                     return;
                 }
                 // get the index in the paths under the current row
-                var currentIndex = $firstElementWithPath
+                currentIndex = $firstElementWithPath
                     .attr("data-json-editor-path");
                 currentIndex = currentIndex.substring(path.length + 1);
                 currentIndex = currentIndex.replace(/\..*$/, "");
@@ -1122,680 +2309,6 @@
             });
         };
 
-        /*!
-         * createNewFieldEditor
-         * Returns a jQuery object containing a new field editor.
-         *
-         * @name createNewFieldEditor
-         * @function
-         * @param {Object} options An object containing the following
-         * properties:
-         *
-         * - `newFields` (Boolean): True if the new field editor will create new
-         * fields instead of editing existing fields, false otherwise.
-         * - `deletableFields` (Boolean): Whether the fields created by this
-         * field editor will be deletable.
-         * - `editableFields` (Boolean): Whether the fields created by this
-         * field editor will be editable.
-         * - `addFields` (Boolean): Whether the objects created by this field
-         * editor will be capable of receiving new fields created with the user
-         * interface.
-         * - `parent` (jQuery): Optional. The jQuery element which is the direct
-         * parent of all the group elements at the same level as the new field
-         * editor destination in the UI and has the `data-json-editor-path`
-         * attribute set to the correct path. If it is not set or it does not
-         * have this attribute set, the `self.container` element and an empty
-         * path string will be used.
-         * - `editedGroup` (jQuery): Optional. The jQuery element representing
-         * the field which is edited by the newly created field editor. It is
-         * required only when `newFields` is set to `false`.
-         *
-         * @return {jQuery} The newly created field editor.
-         */
-        function createNewFieldEditor(options) {
-            var $parent = options.parent && options.parent.length > 0 ?
-                options.parent : self.container;
-            var path = $parent.attr("data-json-editor-path") || "";
-
-            var $div = $("<div>", {
-                class: "json-editor-" + (options.newFields ? "new" : "edit") +
-                    "-field-form"
-            });
-
-            var $nameInput = $("<input>", {
-                type: "text",
-                class: "json-editor-field-name"
-            });
-
-            var $possibleValuesSelect = $("<select>", {
-                multiple: "multiple",
-                class: "json-editor-field-possible-values"
-            });
-
-            var $possibleValuesDiv = $("<div>", {
-                css: {
-                    display: "none"
-                },
-                class: "json-editor-possible-values-section"
-            });
-
-            var $checkboxPossibleValues = $("<input>", {
-                type: "checkbox",
-                on: {
-                    change: function (e) {
-                        $possibleValuesDiv.toggle(this.checked);
-                    }
-                },
-                class: "json-editor-field-enable-possible-values"
-            });
-
-            var $possibleValuesLabel = $("<label>")
-                .text("Enable possible values: ")
-                .append($checkboxPossibleValues);
-
-            var $typeSelect = $("<select>", {
-                on: {
-                    change: function () {
-                        var type = $(this).val();
-                        if (type === "object") {
-                            // A field of type "object" cannot have possible
-                            // values, so we show the possible values controls
-                            // only for fields of type different than "object".
-                            $possibleValuesLabel.add($possibleValuesDiv).hide();
-                        } else {
-                            var $clone = JsonEdit.inputs[type].clone()
-                                .attr("data-json-editor-type", type);
-                            $possibleValueInput.replaceWith($clone);
-                            $possibleValueInput = $clone;
-                            self.setValueToElement($possibleValueInput,
-                                    getDefaultValueForType(type));
-                            $possibleValuesSelect.empty();
-
-                            // A field of type "object" cannot have possible
-                            // values, so we show the possible values controls
-                            // only for fields of type different than "object".
-                            $possibleValuesLabel.show();
-                            $possibleValuesDiv.toggle($checkboxPossibleValues
-                                    .is(":checked"));
-                        }
-                    }
-                },
-                class: "json-editor-field-type"
-            });
-            for (var i = 0; i < knownElementaryFieldTypes.length; i++) {
-                $typeSelect.append($("<option>", {
-                    value: knownElementaryFieldTypes[i],
-                    text: knownElementaryFieldTypes[i]
-                }));
-            }
-            $typeSelect.append($("<option>", {
-                value: "object",
-                text: "object"
-            }));
-
-            var $labelInput = $("<input>", {
-                type: "text",
-                class: "json-editor-field-label"
-            });
-
-            var $possibleValueInput = $("<input>", {
-            });
-
-            var $addPossibleValueButton = $("<input>", {
-                type: "button",
-                value: "+ Add possible value",
-                class: "json-editor-add-possible-value-button",
-                on: {
-                    click: function () {
-                        var val = self.getValueFromElement($possibleValueInput);
-                        var text = JsonEdit.converters.string(val);
-                        // See the explanation in the `createGroup` method,
-                        // `field.possible` if branch, for the reason why we do
-                        // not use `JsonEdit.converters.string` for the `value`
-                        // attribute of the `<option>` element.
-                        $possibleValuesSelect.append($("<option>", {
-                            value: val.toString(),
-                            text: text
-                        }));
-                    }
-                }
-            });
-
-            var $deletePossibleValueButton = $("<input>", {
-                type: "button",
-                value: "× Delete selected possible values",
-                class: "json-editor-delete-possible-value-button",
-                on: {
-                    click: function () {
-                        $possibleValuesSelect.children("option:selected").remove();
-                    }
-                }
-            });
-
-            /*!
-             * nameAlreadyExists
-             * A function that determines whether the given name already exists
-             * in a field under the path in which the user tries to create a new
-             * field.
-             *
-             * @name nameAlreadyExists
-             * @function
-             * @param {String} name The name of the field to search for.
-             * @return {Boolean} True if the name already exists, false
-             * otherwise.
-             */
-            function nameAlreadyExists(name) {
-                // If the field editor is not in a table (or, with other words,
-                // it is in an object).
-                if (!$parent.is("table")) {
-                    // Obtain the data at the path where the new field is
-                    // created.
-                    var data = self.getData(path, $parent);
-
-                    // Return true if the given name is already in the data,
-                    // otherwise return false.
-                    return Object.keys(data).indexOf(name) > -1;
-                }
-                var sch = self.getDefinitionAtPath(path).schema;
-                // Handle empty schemas (arrays without any fields).
-                if ($.isEmptyObject(sch)) {
-                    return false;
-                }
-                // If the schema `sch` contains a single field
-                if (typeof sch.type === "string") {
-                    return name === (sch.name ||
-                            settings.defaultArrayFieldName);
-                }
-                // else if `sch` contains multiple fields
-                return sch[settings.orderProperty].indexOf(name) > -1;
-            }
-
-            var $editedInput;
-
-            var $addFieldButton = $("<input>", {
-                type: "button",
-                value: (options.newFields ? "+ Add" : "💾 Save") + " field",
-                class: "json-editor-add-field-button",
-                on: {
-                    click: function () {
-                        // Remove dots from the name and remove the whitespace
-                        // around it.
-                        $nameInput.val($nameInput.val()
-                                .replace(/\./g, "").trim());
-                        // Remove the whitespace around the label.
-                        $labelInput.val($labelInput.val().trim());
-
-                        var name = $nameInput.val();
-                        // The default label is the name of the field.
-                        var label = $labelInput.val() || name;
-
-                        // Validate the name. It should not be a duplicate, it
-                        // should be different than "+" and not an empty string.
-                        if (name === "+" || name.length === 0 ||
-                                nameAlreadyExists(name)) {
-                            alert(settings.messages.INVALID_FIELD_NAME
-                                    .replace(/\{0\}/g, path));
-                            return;
-                        }
-
-                        var type = $typeSelect.val();
-                        var inTable = $parent.is("table");
-
-                        // Build the schema of the new or modified field.
-                        var newSchema = {
-                            name: name,
-                            label: label,
-                            type: type,
-                            path: (path ? path + "." : "") + name
-                        };
-                        inheritField(newSchema, {
-                            addField: options.addFields,
-                            deletableFields: options.deletableFields,
-                            editableFields: options.editableFields,
-                            deletable: options.deletableFields,
-                            editable: options.editableFields
-                        });
-                        // Get the schema of the array/object field definition
-                        // that is the parent of the new/edited field.
-                        var definition = self.getDefinitionAtPath(path);
-                        var sch = definition.schema;
-                        // The type can be "object" or an elementary type
-                        // (string, date etc.).
-                        if (type === "object") {
-                            newSchema.schema = {};
-                            newSchema.schema[settings.orderProperty] = [];
-
-                            // If the field editor is inside a table
-                            if (inTable) {
-                                // If the array currently has a single field
-                                if (typeof sch.type === "string") {
-                                    // If a new field is created
-                                    if (options.newFields) {
-                                        // TODO: Not yet implemented.
-                                    // else if an existing field is edited
-                                    } else {
-                                        // TODO: Not yet implemented.
-                                    }
-                                // If the array currently has no fields
-                                } else if ($.isEmptyObject(sch)) {
-                                    // If a new field is created
-                                    if (options.newFields) {
-                                        // TODO: Not yet implemented.
-                                    // else if an existing field is edited
-                                    } else {
-                                        alert(settings.messages.
-                                                EDIT_FIELD_IN_ARRAY_WITHOUT_FIELDS);
-                                    }
-                                // If the array currently has at least two
-                                // fields
-                                } else {
-                                    // If a new field is created
-                                    if (options.newFields) {
-                                        // TODO: Not yet implemented.
-                                    // else if an existing field is edited
-                                    } else {
-                                        // TODO: Not yet implemented.
-                                    }
-                                }
-                            // else if not in a table but in an object
-                            } else { // !inTable
-                                var order = sch[settings.orderProperty];
-                                // If a new field is created
-                                if (options.newFields) {
-                                    // A new field of type object is added to an
-                                    // object.
-                                    order.push(name);
-                                    // Insert the new schema in the
-                                    // `settings.schema` variable.
-                                    sch[name] = newSchema;
-                                // else if an existing field is edited
-                                } else {
-                                    // A field of type object or other type is
-                                    // edited to become a field of type object.
-                                    // The field is inside an object.
-                                    var oldName = self.getNameFromPath($editedInput
-                                            .attr("data-json-editor-path"));
-                                    // Keep the schema of the old field
-                                    // definition (the fields in the object) in
-                                    // the new field definition because the
-                                    // field of type "object" is just edited
-                                    // (this means that only its name/path and
-                                    // label could be changed, not the fields in
-                                    // it).
-                                    newSchema.schema = sch[oldName].schema;
-                                    // Insert the new schema in the
-                                    // `settings.schema` variable.
-                                    sch[name] = newSchema;
-                                    // If the name (so also the path) of the
-                                    // field has been changed, replace the old
-                                    // name with the new name in the order array
-                                    // and delete the old field definition with
-                                    // the old name from the schema.
-                                    if (name !== oldName) {
-                                        order[order.indexOf(oldName)] = name;
-                                        delete sch[oldName];
-                                    }
-                                }
-
-                                // Create and show the UI for the schema and add it
-                                // before the field editor.
-                                $div.before(self.createGroup(newSchema));
-                            }
-                        } else {
-                            newSchema.data = getDefaultValueForType(type);
-
-                            // If the possible values checkbox is enabled, add the
-                            // entered possible values to the schema.
-                            if ($checkboxPossibleValues.prop("checked")) {
-                                var possibleValues = [];
-                                var converter = self.converters[newSchema.type];
-                                $possibleValuesSelect.children("option").each(
-                                    function (i, e) {
-                                        possibleValues.push(converter($(e).val()));
-                                    });
-                                newSchema.possible = possibleValues;
-                            }
-
-                            // If the field editor is inside a table
-                            if (inTable) {
-                                function createNewCellEditor(indexString) {
-                                    var path2, sch2;
-                                    path2 = (path ? path + "." : "") + indexString;
-                                    // From the 3 possibilities: no field, one field
-                                    // or many fields in the schema of the array
-                                    // before the addition of the new column, the
-                                    // name should be added to the path only when
-                                    // the schema already contains one or more
-                                    // fields. When it does not contain any fields,
-                                    // the new field will be alone and its data will
-                                    // be accessed directly from the only input in
-                                    // that row.
-                                    if (!$.isEmptyObject(sch)) {
-                                        path2 += "." + name;
-                                    }
-                                    sch2 = $.extend(true, {}, newSchema, {
-                                        path: path2
-                                    });
-                                    delete sch2.label;
-                                    delete sch2.deletable;
-                                    delete sch2.editable;
-                                    return $("<td>").append(self.createGroup(sch2));
-                                }
-
-                                /*!
-                                 * addNewColumn
-                                 * Creates and shows the UI for the new column in
-                                 * the table. First adds a table column header then
-                                 * adds empty inputs under it.
-                                 *
-                                 * @name addNewColumn
-                                 * @function
-                                 * @param {jQuery} $table The table element in which
-                                 * to add the new column.
-                                 * @param {Object} newDef The field definition of
-                                 * the new column.
-                                 */
-                                function addNewColumn($table, newDef) {
-                                    // First add the column header.
-                                    $table.find("thead > tr:first > th:last")
-                                        .before(createColumnHeader(newDef));
-                                    var $trs = $table.find("tbody > tr");
-                                    var $tds, $cellEditor;
-                                    // For each row in the table body.
-                                    for (var i = 0; i < $trs.length; i++) {
-                                        var $tr = $trs.eq(i);
-                                        // Create a new cell editor.
-                                        $cellEditor = createNewCellEditor(i.toString());
-                                        $tds = $tr.children("td");
-                                        // If there are cells in the row, put the
-                                        // cell editor before the last cell.
-                                        if ($tds.length > 0) {
-                                            $tds.eq(-1).before($cellEditor);
-                                        // Else append the cell editor to the row.
-                                        } else {
-                                            $tr.append($cellEditor);
-                                        }
-                                    }
-                                    // Do the same for the table footer row.
-                                    var $tfootRow = $table.find("tfoot > tr:first");
-                                    $tds = $tfootRow.children("td");
-                                    $cellEditor = createNewCellEditor("+");
-                                    if ($tds.length > 0) {
-                                        $tds.eq(-1).before($cellEditor);
-                                    } else {
-                                        $tfootRow.append($cellEditor);
-                                    }
-                                }
-
-                                // If the schema is not an object with multiple
-                                // fields or an empty object, but a single field,
-                                if (typeof sch.type === "string") {
-                                    // and if the current field editor just creates new
-                                    // fields (so it does not edit existing fields),
-                                    if (options.newFields) {
-                                        // move the old single field inside a larger
-                                        // schema which also contains the newly created
-                                        // field.
-                                        var nameOfTheSingleOldField = sch.name ||
-                                            settings.defaultArrayFieldName;
-                                        definition.schema = {};
-                                        definition.schema[settings.orderProperty] =
-                                            [nameOfTheSingleOldField, name];
-                                        definition.schema[nameOfTheSingleOldField] =
-                                            sch;
-                                        definition.schema[name] = newSchema;
-                                        sch = definition.schema;
-
-                                        schemaCoreFields(sch, definition.path +
-                                                ".");
-                                        // The call to `schemaCoreFields` also sets
-                                        // the label to the name
-                                        // `settings.defaultArrayFieldName` in some
-                                        // cases, but we can do better, we set it to
-                                        // `settings.defaultArrayFieldLabel` if
-                                        // `sch` does not have a name set.
-                                        sch[nameOfTheSingleOldField].label =
-                                            sch.name ||
-                                            settings.defaultArrayFieldLabel;
-
-                                        // Update the UI (the table rows in the
-                                        // table body) to represent the new schema.
-                                        $parent.find("tbody > tr").each(
-                                                function (i, e) {
-                                            var $e = $(e);
-                                            $e.attr({
-                                                "data-json-editor-path":
-                                                    definition.path + "." + i,
-                                                "data-json-editor-type": "object"
-                                            });
-                                            $e.find("[data-json-editor-path]")
-                                                    .each(function (ii, ee) {
-                                                var $ee = $(ee);
-                                                var p = $ee
-                                                    .attr("data-json-editor-path");
-                                                $ee.attr("data-json-editor-path",
-                                                        p + "." +
-                                                        nameOfTheSingleOldField);
-                                            });
-                                        });
-                                        // Also update the row in the table footer.
-                                        var $tfootRow = $parent.find("tfoot > tr");
-                                        $tfootRow.attr({
-                                            "data-json-editor-path":
-                                                definition.path + ".+",
-                                            "data-json-editor-type": "object"
-                                        });
-                                        var $tfootInput = $tfootRow.find("[data-json-editor-path]");
-                                        $tfootInput.attr("data-json-editor-path",
-                                                $tfootInput.attr("data-json-editor-path") +
-                                                "." + nameOfTheSingleOldField);
-                                        // Also update the row in the table header.
-                                        $parent.find("thead:first > tr:first > th:first")
-                                            .attr("data-json-editor-name",
-                                                    nameOfTheSingleOldField);
-
-                                        // Delete the controls from the only column
-                                        // of the table because they will be added
-                                        // in a new column.
-                                        $parent.find("tr > td:nth-child(1) [data-json-editor-control]")
-                                            .remove();
-
-                                        // Add a new column with controls (add,
-                                        // delete).
-                                        addColumnWithControls($parent);
-
-                                        addNewColumn($parent, newSchema);
-                                    } else {
-                                        // TODO: The only field in the table is being
-                                        // edited. Not yet implemented.
-                                    }
-                                // else if the schema is an empty object (they array
-                                // has no fields)
-                                } else if ($.isEmptyObject(sch)) {
-                                    // A new field/column is added to a table
-                                    // without fields/columns.
-                                    if (options.newFields) {
-                                        // First update the schema.
-                                        definition.schema = newSchema;
-
-                                        // The new column should not have the
-                                        // attribute `data-json-editor-name` set in
-                                        // the column header, so we clone the schema
-                                        // object and remove the name and path
-                                        // properties from it.
-                                        var def = $.extend(true, {}, newSchema);
-                                        delete def.name;
-                                        delete def.path;
-
-                                        // Add the new column before deleting the
-                                        // controls column because
-                                        // `deleteControlsColumn` puts the controls
-                                        // in the last column after removing the
-                                        // controls column, and that last column
-                                        // exists only after calling `addNewColumn`.
-                                        addNewColumn($parent, def);
-                                        deleteControlsColumn($parent);
-                                    // Else an existing field/column is edited in a
-                                    // table without fields/columns.
-                                    } else {
-                                        alert(settings.messages.
-                                                EDIT_FIELD_IN_ARRAY_WITHOUT_FIELDS);
-                                    }
-                                // else if the schema is an object with multiple fields
-                                } else {
-                                    // A new field is added to a table with multiple
-                                    // fields.
-                                    if (options.newFields) {
-                                        // First update the schema.
-                                        sch[settings.orderProperty].push(name);
-                                        sch[name] = newSchema;
-
-                                        addNewColumn($parent, newSchema);
-                                    // Else an existing field is edited in a table
-                                    // with multiple fields.
-                                    } else {
-                                        // TODO: Not yet implemented.
-                                    }
-                                }
-
-                            // else if not in a table but in an object
-                            } else {
-                                // in the `settings.schema` variable store the
-                                // schema without the (default) data.
-                                var newSchemaWithoutData = $.extend(true, {}, newSchema);
-                                delete newSchemaWithoutData.data;
-                                var order = sch[settings.orderProperty];
-                                // if a new field is created
-                                if (options.newFields) {
-                                    order.push(name);
-                                // else if an existing field is edited
-                                } else {
-                                    var oldName = self.getNameFromPath($editedInput
-                                            .attr("data-json-editor-path"));
-                                    delete sch[oldName];
-                                    order[order.indexOf(oldName)] = name;
-                                }
-                                sch[name] = newSchemaWithoutData;
-
-                                // Create and show the UI for the schema and add it
-                                // before the field editor.
-                                $div.before(self.createGroup(newSchema));
-                            }
-                        }
-
-                        // If this editor does not create new fields (it just
-                        // edits an existing field), after the UI is created
-                        // above, remove the field editor and the old field UI
-                        // from the document.
-                        if (!options.newFields) {
-                            options.editedGroup.remove();
-                            $div.remove();
-                            return;
-                        }
-
-                        // If this editor creates new fields, it should not be
-                        // removed from the UI after submitting, so we reset its
-                        // values to the default ones.
-                        $nameInput.add($labelInput, $typeSelect,
-                                $possibleValueInput).val(null);
-                        $possibleValuesSelect.empty();
-                        $checkboxPossibleValues.prop("checked", false)
-                            .trigger("change");
-                        $typeSelect.trigger("change");
-                    }
-                }
-            });
-
-            // Call this handler to update the possible value input to the
-            // correct type and to clear the possible values list before the
-            // possible values from the old schema are inserted in it below.
-            $typeSelect.trigger("change");
-
-            // If this condition is met, `options.editedGroup` is a valid jQuery
-            // element.
-            if (!options.newFields) {
-                // If the edited group's jQuery element has the attribute
-                // "data-json-editor-path" set, it is the UI of a field with the
-                // type "object", so the edited input jQuery element is that
-                // jQuery element. If that attribute is not set, it is the UI of
-                // a field with a type different than "object", so the edited
-                // input jQuery element is the descendant of the edited group's
-                // jQuery element with that attribute set.
-                var isObject = typeof options.editedGroup
-                    .attr("data-json-editor-path") !== "undefined";
-                if (isObject) {
-                    $editedInput = options.editedGroup;
-                } else {
-                    $editedInput = options.editedGroup
-                        .find("[data-json-editor-path]");
-                }
-
-                var fieldPath = $editedInput.attr("data-json-editor-path");
-                var oldDef = self.getDefinitionAtPath(fieldPath);
-
-                $typeSelect.val(oldDef.type)
-                    .trigger("change");
-                $nameInput.val(oldDef.name);
-                $labelInput.val(oldDef.label);
-                if (isObject && oldDef.possible) {
-                    $checkboxPossibleValues.prop("checked", true)
-                        .trigger("change");
-                    for (var i = 0; i < oldDef.possible.length; i++) {
-                        var val = oldDef.possible[i];
-                        var text = JsonEdit.converters.string(val);
-                        // See the explanation in the `createGroup` method,
-                        // `field.possible` if branch, for the reason why we do
-                        // not use `JsonEdit.converters.string` for the `value`
-                        // attribute of the `<option>` element.
-                        $possibleValuesSelect.append($("<option>", {
-                            value: val.toString(),
-                            text: text
-                        }));
-                    }
-                }
-            }
-
-            var $label = $("<label>");
-            if (!$parent.is("table")) {
-                $label.append($("<hr>"));
-            }
-            var formTitle = (options.newFields ? "Add" : "Edit") + " field";
-            $div.append($("<form>").append($label.append(
-                    $("<strong>").text(formTitle),
-                    $("<br>"),
-                    $("<label>").text("Name: ").append($nameInput),
-                    $("<label>").text("Type: ").append($typeSelect),
-                    $("<label>")
-                        .text("Label (optional, without final semicolon): ")
-                        .append($labelInput),
-                    $("<br>"),
-                    $possibleValuesLabel,
-                    $possibleValuesDiv.append($possibleValuesSelect,
-                        $possibleValueInput, $addPossibleValueButton,
-                        $deletePossibleValueButton),
-                    $addFieldButton)));
-
-            // If this is an editor for an existing field,
-            if (!options.newFields) {
-                // also show a Cancel button.
-                $label.append($("<input>", {
-                    type: "button",
-                    value: "Cancel",
-                    on: {
-                        click: function () {
-                            // There is an edited field which should be marked
-                            // as not being edited anymore.
-                            $editedInput.removeClass("json-editor-edited");
-                            // Delete the field editor from the document.
-                            $div.remove();
-                        }
-                    }
-                }));
-            }
-
-            return $div;
-        }
-
         /**
          * add
          * Adds new elements in arrays.
@@ -1807,6 +2320,8 @@
          * @return {undefined}
          */
         self.add = function (path, data) {
+            var arrayFieldDef, $tbody, nextIndex, $tr, $deleteButton;
+
             var $elm = null;
             if (path.constructor === jQuery) {
                 $elm = path;
@@ -1817,19 +2332,22 @@
                         self.container);
             }
 
-            var fieldSchema = findValue(settings.schema, path);
-            var $tbody = $elm.find("tbody");
+            // Obtain the definition of the field of type "array" at the path
+            // `path` from the `settings.schema` variable.
+            arrayFieldDef = self.getDefinitionAtPath(path);
+
+            $tbody = $elm.find("tbody");
             // The index of the newly added row, used in the paths
-            var nextIndex = $tbody.children().length;
-            var $tr = $("<tr>").appendTo($tbody);
-            var $deleteButton = createDeleteButton($elm);
+            nextIndex = $tbody.children().length;
+            $tr = $("<tr>").appendTo($tbody);
+            $deleteButton = createDeleteButton($elm);
 
             // If the type of the schema is explicitly specified
-            if (typeof Object(fieldSchema.schema).type === "string") {
+            if (typeof Object(arrayFieldDef.schema).type === "string") {
                 // then this is an array table with a single column
-                var newSchema = $.extend(true, {}, fieldSchema.schema, {
+                var newSchema = $.extend(true, {}, arrayFieldDef.schema, {
                     type: getTypeOf(data),
-                    path: fieldSchema.path + "." + nextIndex,
+                    path: arrayFieldDef.path + "." + nextIndex,
                     data: data
                 });
                 delete newSchema.label;
@@ -1837,7 +2355,9 @@
                 delete newSchema.editable;
                 $tr.append($("<td>").append(self.createGroup(newSchema),
                             $deleteButton));
-            } else if (!$.isEmptyObject(fieldSchema.schema)) {
+            } else if (!hasEmptySchema(arrayFieldDef)) {
+                var order, fields;
+
                 // Only set these two attributes if the array to which we are
                 // adding a new item is an array of objects, because when it is
                 // an array of simple objects, the attributes are already set to
@@ -1849,19 +2369,19 @@
 
                 // An array with the names of all the fields directly in this
                 // schema
-                var order = fieldSchema.schema[settings.orderProperty];
+                order = arrayFieldDef.schema[settings.orderProperty];
 
-                var fields = []; // Field names
+                fields = []; // Field names
                 for (var i = 0; i < order.length; i++) {
-                    fields.push(fieldSchema.schema[order[i]].name);
+                    fields.push(arrayFieldDef.schema[order[i]].name);
                 }
 
                 for (var i = 0; i < fields.length; ++i) {
                     // The schema of the current field
-                    var sch = fieldSchema.schema[fields[i]];
+                    var sch = arrayFieldDef.schema[fields[i]];
                     // The path of the current field
-                    var currentFieldPath = fieldSchema.path + "." + nextIndex +
-                        "." + fields[i];
+                    var currentFieldPath = arrayFieldDef.path + "." +
+                        nextIndex + "." + fields[i];
 
                     var newSchema = $.extend(true, {}, sch, {
                         path: currentFieldPath,
@@ -1873,7 +2393,7 @@
                     $tr.append($("<td>").append(self.createGroup(newSchema)));
                 }
                 $tr.append($("<td>").append($deleteButton));
-            } else { // if ($.isEmptyObject(fieldSchema.schema))
+            } else { // if (hasEmptySchema(arrayFieldDef))
                 $tr.append($("<td>").append($deleteButton));
             }
         };
@@ -1919,6 +2439,7 @@
          * @return {Object} The value of the specified jQuery element.
          */
         self.getValueFromElement = function ($el) {
+            var converter;
             var type = $el.attr("data-json-editor-type");
 
             var val;
@@ -1936,7 +2457,7 @@
                 val = $el.val() || "";
             }
 
-            var converter = self.converters[type];
+            converter = self.converters[type];
             if (typeof converter === "function") {
                 val = converter(val);
             }
@@ -2011,6 +2532,7 @@
 
             // Traverse all the fields in the UI.
             $("[data-json-editor-path]", root).each(function () {
+                var p, val;
                 var $this = $(this);
                 var type = $this.attr("data-json-editor-type");
                 // If the type is "object", expect that this jQuery `each` loop
@@ -2018,7 +2540,7 @@
                 // so we do not need to do anything now.
                 if (type === "object") return;
 
-                var p = $this.attr("data-json-editor-path");
+                p = $this.attr("data-json-editor-path");
                 // If the current path does not start with the given path,
                 // return.
                 if (p.substring(0, path.length) !== path) { return; }
@@ -2029,7 +2551,7 @@
                     p = p.substring(1);
                 }
 
-                var val = findValue(data, p);
+                val = findValue(data, p);
 
                 // When we deal with an array (in the UI, that means a table),
                 // we delete unnecessary table rows and add new necessary table
@@ -2078,19 +2600,31 @@
          * @param {Boolean} includeNewItemEditors Optional, if true the paths
          * ending in ".+" or containing ".+." will be included in the final data
          * object.
+         * @param {Boolean} includeFieldsBeingEdited Optional, if true the data
+         * of the fields that are currently being edited will also be included
+         * in the final returned object.
          * @return {Object} The object containing data taken from form inputs.
          */
-        self.getData = function (path, root, includeNewItemEditors) {
+        self.getData = function (path, root, includeNewItemEditors,
+                includeFieldsBeingEdited) {
+            var directValue, data, selector;
+
             path = path || "";
             root = root || self.container;
 
-            var directValue = false;
-            var data = {};
+            directValue = false;
+            data = {};
 
             // Traverse all the fields in the UI which are not being edited (and
-            // they do not have a parent field that is being edited).
-            $("[data-json-editor-path]:not(.json-editor-edited, .json-editor-edited *)",
-                    root).each(function () {
+            // they do not have a parent field that is being edited). If the
+            // `includeFieldsBeingEdited` argument is true, also traverse the
+            // fields that are being edited and their descendant fields.
+            selector = "[data-json-editor-path]";
+            if (!includeFieldsBeingEdited) {
+                selector += ":not(.json-editor-edited, .json-editor-edited *)";
+            }
+            $(selector, root).each(function () {
+                var val;
                 var $this = $(this);
                 var type = $this.attr("data-json-editor-type");
 
@@ -2111,7 +2645,6 @@
                 // a new item editor in a table, skip.
                 if (!includeNewItemEditors && /(\.\+$|\.\+\.)/.test(p)) { return; }
 
-                var val;
                 // If `type` is "array" we set the value to an empty array to be
                 // sure that an array with no elements will still be in the
                 // generated data. The elements of the array will be read from
