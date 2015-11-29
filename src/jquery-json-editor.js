@@ -405,11 +405,15 @@
      *  schemas which contains the order in which the fields from the schemas
      *  should be laid down in the user interface. Default value: "_order".
      *  - `messages` (Object): An object containing one or more of the following
-     *  properties: `EDIT_FIELD_IN_ARRAY_WITHOUT_FIELDS`, `INVALID_FIELD_NAME`
-     *  (which can contain the string `{0}` that will be replaced with the path
-     *  of the object in which the edited/added field is found). There
-     *  properties are strings that should be translated in the language of the
-     *  user. By default they contain the English version of the messages.
+     *  properties: `EDIT_FIELD_IN_ARRAY_WITHOUT_FIELDS` (default value:
+     *  "Impossible situation: trying to edit a field in an array without
+     *  fields."), `INVALID_FIELD_NAME` (default value: "The name of the field
+     *  should be a non-empty string without dots, different than "+" and not
+     *  already existing under the path "{0}".") (which can contain the string
+     *  `{0}` that will be replaced with the path of the object in which the
+     *  edited/added field is found). There properties are strings that should
+     *  be translated in the language of the user. By default they contain the
+     *  English version of the messages.
      *
      * @return {Object} The JSON editor object containing:
      *
@@ -521,7 +525,7 @@
          *
          * @name hasEmptySchema
          * @function
-         * @param {Object} def THe definition of the field whose schema to
+         * @param {Object} def The definition of the field whose schema to
          * check.
          * @return {Boolean} True if the schema of the given field has no
          * fields, false otherwise.
@@ -535,6 +539,42 @@
                 return;
             }
             return def.schema[settings.orderProperty].length === 0;
+        }
+
+        /*!
+         * updateDescendantDefPaths
+         * Updates the paths of the descendant field definitions according to
+         * the path of the given field definition and to the names of the
+         * descendant fields. For example if `def.path` is
+         * "first.second" and `def` contains a field with the path
+         * "first.test.third", the new path of that field will be
+         * "first.second.third".
+         *
+         * @name updateDescendantDefPaths
+         * @function
+         * @param {Object} def The definition of the field whose descendant
+         * fields' paths should be updated.
+         * @return {undefined}
+         */
+        function updateDescendantDefPaths(def) {
+            var p = def.path;
+
+            if (typeof def.schema !== "object") return;
+
+            for (var fieldName in def.schema) {
+                if (!def.schema.hasOwnProperty(fieldName) ||
+                        fieldName === settings.orderProperty) {
+                    continue;
+                }
+
+                var subDef = def.schema[fieldName];
+
+                subDef.path = p + "." + fieldName;
+                if (subDef.type === "object" ||
+                        subDef.type === "array") {
+                    process(subDef);
+                }
+            }
         }
 
         /*!
@@ -863,6 +903,47 @@
                     sourceDef.deletableFields);
             targetDef.editable = f(targetDef.editable,
                     sourceDef.editableFields);
+        }
+
+        /*!
+         * updateAndRenameFieldData
+         * Updates the data of all the fields in the JSON editor which is stored
+         * in `settings.data` variable and is used to fill the edited field
+         * after changing its name. It also renames the field data in the
+         * `settings.data` variable if the new name is differend than the old
+         * name so that the new input group created with the call below to the
+         * `createGroup` method will display the correct data. This function
+         * needs to stay in the scope of the `settings.data` variable and of the
+         * `renameValueAtPath` function to work without errors.
+         *
+         * @name updateAndRenameFieldData
+         * @function
+         * @param {String} oldPath The path to the field before its name was
+         * edited in the current field editor.
+         * @param {String} newName The new name of the field, the one inserted
+         * by the end user in the current field editor before pressing the Save
+         * button. It can be the same as the old name and in this case this
+         * function only updates the data without renaming any field data in the
+         * `settings.data` object.
+         * @return {undefined}
+         */
+        function updateAndRenameFieldData(oldPath, newName) {
+
+            var oldName = self.getNameFromPath(oldPath);
+            // Update the default data used for the edited field's new input
+            // group (which is the DOM representation of the field) and also
+            // updates the default data for all the remaining fields in the JSON
+            // editor, taking the data from the way the input groups are
+            // currently filled in the UI by the end user or by the initial data
+            // offered to the JSON editor constructor.
+            settings.data = self.getData(null, null,
+                    null, true);
+            // If the name (so also the path) of the field has been changed
+            if (newName !== oldName) {
+                // Then replace in the `settings.data` variable the old field
+                // name with the new field name.
+                renameValueAtPath(oldPath, newName);
+            }
         }
 
         /**
@@ -1544,14 +1625,15 @@
                         var type = $typeSelect.val();
                         var inTable = $parent.is("table");
 
-                        // Build the schema of the new or modified field.
-                        var newSchema = {
+                        // Build the field definition of the new or modified
+                        // field.
+                        var newFieldDef = {
                             name: name,
                             label: label,
                             type: type,
                             path: (path ? path + "." : "") + name
                         };
-                        inheritField(newSchema, {
+                        inheritField(newFieldDef, {
                             addField: options.addFields,
                             deletableFields: options.deletableFields,
                             editableFields: options.editableFields,
@@ -1567,7 +1649,7 @@
                         // `knownElementaryFieldTypes` variable for the
                         // elementary types.
                         if (type === "object") {
-                            deleteAllNestedFields(newSchema);
+                            deleteAllNestedFields(newFieldDef);
 
                             // If the field editor is inside a table
                             if (inTable) {
@@ -1609,17 +1691,17 @@
                                     // A new field of type object is added to an
                                     // object.
                                     order.push(name);
-                                    // Insert the new schema in the
+                                    // Insert the new field definition in the
                                     // `settings.schema` variable.
-                                    sch[name] = newSchema;
+                                    sch[name] = newFieldDef;
                                 // else if an existing field is edited
                                 } else {
                                     // A field of type object or other type is
                                     // edited to become a field of type object.
                                     // The field is inside an object.
-                                    var oldName = self.getNameFromPath(
-                                            $editedInput
-                                            .attr("data-json-editor-path"));
+                                    var _path = $editedInput.attr(
+                                            "data-json-editor-path");
+                                    var oldName = self.getNameFromPath(_path);
                                     // Keep the schema of the old field
                                     // definition (the fields in the object) in
                                     // the new field definition because the
@@ -1627,10 +1709,27 @@
                                     // (this means that only its name/path and
                                     // label could be changed, not the fields in
                                     // it).
-                                    newSchema.schema = sch[oldName].schema;
-                                    // Insert the new schema in the
+                                    newFieldDef.schema = sch[oldName].schema;
+
+                                    // Also change the paths of the descendant
+                                    // field definitions. For example if `_path`
+                                    // is "first.second" (`oldName` is "second")
+                                    // and `name` is "third", the new path of
+                                    // the field will be "first.third" and lets
+                                    // say that the schema of this field
+                                    // contains a string field with path
+                                    // "first.second.test". After changing the
+                                    // path from "first.second" to
+                                    // "first.third", this string field should
+                                    // also change its path from
+                                    // "first.second.test" to
+                                    // "first.third.test".
+                                    updateDescendantDefPaths(newFieldDef);
+
+                                    // Insert the new field definition in the
                                     // `settings.schema` variable.
-                                    sch[name] = newSchema;
+                                    sch[name] = newFieldDef;
+
                                     // If the name (so also the path) of the
                                     // field has been changed, replace the old
                                     // name with the new name in the order array
@@ -1640,15 +1739,18 @@
                                         order[order.indexOf(oldName)] = name;
                                         delete sch[oldName];
                                     }
+
+                                    updateAndRenameFieldData(_path, name);
                                 }
 
-                                // Create and show the UI for the schema and add it
-                                // before the field editor.
-                                $div.before(self.createGroup(newSchema));
+                                // Create and show the UI for the field
+                                // definition and add it before the field
+                                // editor.
+                                $div.before(self.createGroup(newFieldDef));
                             }
                         // the new field has the type "array"
                         } else if (type === "array") {
-                            deleteAllNestedFields(newSchema);
+                            deleteAllNestedFields(newFieldDef);
 
                             // If the field editor is inside a table
                             if (inTable) {
@@ -1691,9 +1793,9 @@
                                     // A new field of type array is added to an
                                     // object.
                                     order.push(name);
-                                    // Insert the new schema in the
+                                    // Insert the new field definition in the
                                     // `settings.schema` variable.
-                                    sch[name] = newSchema;
+                                    sch[name] = newFieldDef;
                                 // else if an existing field is edited
                                 } else {
                                     var _path = $editedInput
@@ -1709,19 +1811,26 @@
                                     // (this means that only its name/path and
                                     // label could be changed, not the fields in
                                     // it).
-                                    newSchema.schema = sch[oldName].schema;
-                                    // Insert the new schema in the
+                                    newFieldDef.schema = sch[oldName].schema;
+
+                                    // Also change the paths of the descendant
+                                    // field definitions. For example if `_path`
+                                    // is "first.second" (`oldName` is "second")
+                                    // and `name` is "third", the new path of
+                                    // the field will be "first.third" and lets
+                                    // say that the schema of this field
+                                    // contains a string field with path
+                                    // "first.second.test". After changing the
+                                    // path from "first.second" to
+                                    // "first.third", this string field should
+                                    // also change its path from
+                                    // "first.second.test" to
+                                    // "first.third.test".
+                                    updateDescendantDefPaths(newFieldDef);
+
+                                    // Insert the new field definition in the
                                     // `settings.schema` variable.
-                                    sch[name] = newSchema;
-                                    // Update the default data used for the
-                                    // edited field's new input group (DOM
-                                    // representation of the field). The next
-                                    // instruction does this, but also updates
-                                    // the default data for all the fields
-                                    // taking it from the way the input groups
-                                    // are currently filled in the UI.
-                                    settings.data = self.getData(null, null,
-                                            null, true);
+                                    sch[name] = newFieldDef;
                                     // If the name (so also the path) of the
                                     // field has been changed, replace the old
                                     // name with the new name in the order array
@@ -1730,31 +1839,30 @@
                                     if (name !== oldName) {
                                         order[order.indexOf(oldName)] = name;
                                         delete sch[oldName];
-                                        // Then replace in the `settings.data`
-                                        // variable the old field name with the
-                                        // new field name.
-                                        renameValueAtPath(_path, name);
                                     }
+
+                                    updateAndRenameFieldData(_path, name);
                                 }
 
-                                // Create and show the UI for the schema and add it
-                                // before the field editor.
-                                $div.before(self.createGroup(newSchema));
+                                // Create and show the UI for the field
+                                // definition and add it before the field
+                                // editor.
+                                $div.before(self.createGroup(newFieldDef));
                             }
                         // type is an elementary type (not "object" or "array")
                         } else {
-                            newSchema.data = getDefaultValueForType(type);
+                            newFieldDef.data = getDefaultValueForType(type);
 
                             // If the possible values checkbox is enabled, add the
-                            // entered possible values to the schema.
+                            // entered possible values to the field definition.
                             if ($checkboxPossibleValues.prop("checked")) {
                                 var possibleValues = [];
-                                var converter = self.converters[newSchema.type];
+                                var converter = self.converters[newFieldDef.type];
                                 $possibleValuesSelect.children("option").each(
                                     function (i, e) {
                                         possibleValues.push(converter($(e).val()));
                                     });
-                                newSchema.possible = possibleValues;
+                                newFieldDef.possible = possibleValues;
                             }
 
                             // If the field editor is inside a table
@@ -1774,7 +1882,7 @@
                                     if (!hasEmptySchema(definition)) {
                                         path2 += "." + name;
                                     }
-                                    sch2 = $.extend(true, {}, newSchema, {
+                                    sch2 = $.extend(true, {}, newFieldDef, {
                                         path: path2
                                     });
                                     delete sch2.label;
@@ -1844,7 +1952,7 @@
                                             [nameOfTheSingleOldField, name];
                                         definition.schema[nameOfTheSingleOldField] =
                                             sch;
-                                        definition.schema[name] = newSchema;
+                                        definition.schema[name] = newFieldDef;
                                         sch = definition.schema;
 
                                         schemaCoreFields(sch, definition.path +
@@ -1860,7 +1968,9 @@
                                             settings.defaultArrayFieldLabel;
 
                                         // Update the UI (the table rows in the
-                                        // table body) to represent the new schema.
+                                        // table body) to represent the new
+                                        // field definition which now contains a
+                                        // new field in its schema.
                                         $parent.find("tbody > tr").each(
                                                 function (i, e) {
                                             var $e = $(e);
@@ -1905,13 +2015,13 @@
                                         // delete).
                                         addColumnWithControls($parent);
 
-                                        addNewColumn($parent, newSchema);
+                                        addNewColumn($parent, newFieldDef);
                                     } else {
                                         // TODO: The only field in the table is being
                                         // edited. Not yet implemented.
                                     }
-                                // else if the schema is an empty object (they array
-                                // has no fields)
+                                // else if the schema is empty (the array has no
+                                // fields)
                                 } else if (hasEmptySchema(definition)) {
                                     // A new field/column is added to a table
                                     // without fields/columns.
@@ -1921,16 +2031,17 @@
                                         // the column header, so we clone the schema
                                         // object and remove the name and path
                                         // properties from it.
-                                        var def = $.extend(true, {}, newSchema);
+                                        var def = $.extend(true, {}, newFieldDef);
                                         delete def.name;
                                         delete def.path;
 
-                                        // Add the new column before deleting the
-                                        // controls column because
-                                        // `deleteControlsColumn` puts the controls
-                                        // in the last column after removing the
-                                        // controls column, and that last column
-                                        // exists only after calling `addNewColumn`.
+                                        // Add the new column before deleting
+                                        // the controls column because
+                                        // `deleteControlsColumn` puts the
+                                        // controls in the last column after
+                                        // removing the controls column, and
+                                        // that last column exists only after
+                                        // calling the `addNewColumn` function.
                                         // Add the new column before updating
                                         // the schema of the array because the
                                         // `addNewColumn` function uses the old
@@ -1939,7 +2050,7 @@
                                         addNewColumn($parent, def);
 
                                         // Update the schema of the array.
-                                        definition.schema = newSchema;
+                                        definition.schema = newFieldDef;
 
                                         deleteControlsColumn($parent);
                                     // Else an existing field/column is edited in a
@@ -1948,16 +2059,16 @@
                                         alert(settings.messages.
                                                 EDIT_FIELD_IN_ARRAY_WITHOUT_FIELDS);
                                     }
-                                // else if the schema is an object with multiple fields
+                                // else if the schema contains multiple fields
                                 } else {
                                     // A new field is added to a table with multiple
                                     // fields.
                                     if (options.newFields) {
                                         // First update the schema.
                                         sch[settings.orderProperty].push(name);
-                                        sch[name] = newSchema;
+                                        sch[name] = newFieldDef;
 
-                                        addNewColumn($parent, newSchema);
+                                        addNewColumn($parent, newFieldDef);
                                     // Else an existing field is edited in a table
                                     // with multiple fields.
                                     } else {
@@ -1968,25 +2079,29 @@
                             // else if not in a table but in an object
                             } else {
                                 // in the `settings.schema` variable store the
-                                // schema without the (default) data.
-                                var newSchemaWithoutData = $.extend(true, {}, newSchema);
-                                delete newSchemaWithoutData.data;
+                                // field definition without the (default) data.
+                                var newFieldDefWithoutData = $.extend(true, {},
+                                        newFieldDef);
+                                delete newFieldDefWithoutData.data;
                                 var order = sch[settings.orderProperty];
                                 // if a new field is created
                                 if (options.newFields) {
                                     order.push(name);
                                 // else if an existing field is edited
                                 } else {
-                                    var oldName = self.getNameFromPath($editedInput
-                                            .attr("data-json-editor-path"));
+                                    var _path = $editedInput
+                                        .attr("data-json-editor-path");
+                                    var oldName = self.getNameFromPath();
                                     delete sch[oldName];
                                     order[order.indexOf(oldName)] = name;
+                                    updateAndRenameFieldData(_path, name);
                                 }
-                                sch[name] = newSchemaWithoutData;
+                                sch[name] = newFieldDefWithoutData;
 
-                                // Create and show the UI for the schema and add it
-                                // before the field editor.
-                                $div.before(self.createGroup(newSchema));
+                                // Create and show the UI for the field
+                                // definition and add it before the field
+                                // editor.
+                                $div.before(self.createGroup(newFieldDef));
                             }
                         }
 
