@@ -1679,7 +1679,7 @@
                                 } else {
                                     var _path = $editedInput
                                         .attr("data-json-editor-path");
-                                    var oldName = self.getNameFromPath();
+                                    var oldName = self.getNameFromPath(_path);
                                     delete sch[oldName];
                                     order[order.indexOf(oldName)] = name;
                                     updateAndRenameFieldData(_path, name);
