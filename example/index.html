@@ -58,8 +58,28 @@ a = {
                     test3: "Testing 3"
                 },
                 dogs: [
-                    { name: "Bobby", breed: "Boxer" },
-                    { name: "Rex", breed: "Wolfdog" }
+                    {
+                        name: "Bobby",
+                        breed: "Boxer",
+                        accessories: {
+                            lead: true,
+                            muzzle: true,
+                            collar: true,
+                            clothes: true,
+                            toys: true
+                        }
+                    },
+                    {
+                        name: "Rex",
+                        breed: "Wolfdog",
+                        accessories: {
+                            lead: true,
+                            muzzle: true,
+                            collar: true,
+                            clothes: false,
+                            toys: false
+                        }
+                    }
                 ]
             }
         }
@@ -168,10 +188,21 @@ a = {
                             addField: true,
                             deletableFields: true,
                             schema: {
-                                _order: ["name", "breed"],
+                                _order: ["name", "breed", "accessories"],
                                 name: { label: "Name" },
                                 breed: { label: "Breed", possible: ["Dalmatian",
                                     "Boxer", "Wolfdog"] },
+                                accessories: { label: "Accessories",
+                                    schema: {
+                                        _order: ["lead", "muzzle", "collar",
+                                            "clothes", "toys"],
+                                        lead: { label: "Lead" },
+                                        muzzle: { label: "Muzzle" },
+                                        collar: { label: "Collar" },
+                                        clothes: { label: "Clothes" },
+                                        toys: { label: "Toys" }
+                                    }
+                                }
                             }
                         }
                     }

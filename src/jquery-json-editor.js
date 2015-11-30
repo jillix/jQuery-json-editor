@@ -2066,18 +2066,36 @@
                     "data-json-editor-type": "object"
                 });
 
+                // If the type is "object", `$input` is not a single jQuery
+                // element but an array of jQuery elements, one for each field
+                // of the object.
                 $input = [];
+                // Obtain the array in the schema with the order of the fields.
+                // The order in which the properties of the JavaScript object
+                // are declared is not always kept by the browser.
                 order = field.schema[settings.orderProperty];
+                // For each field in the schema of the field of type "object"
                 for (var i = 0; i < order.length; i++) {
+                    // The name of the subfield
                     var k = order[i];
+                    // The current subfield definition
                     var cField = field.schema[k];
+
+                    // Clone the subfield definition and in the clone set the
+                    // path and the data
                     var fieldDef = $.extend(true, {}, cField, {
                         path: field.path + "." + k,
                         _edit: field.edit
                     });
+                    if (typeof fieldData !== "undefined" &&
+                            typeof fieldData[k] !== "undefined") {
+                        fieldDef.data = fieldData[k];
+                    }
 
                     inheritField(fieldDef, field);
 
+                    // Create the input group from the subfield definition clone
+                    // `fieldDef` and add it to the `$input` array
                     $input.push(self.createGroup(fieldDef));
                 }
 
