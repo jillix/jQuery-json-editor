@@ -388,6 +388,38 @@
             x instanceof Date;
     }
 
+    /*!
+     * escapeRegExp
+     * Source and explanation here: http://stackoverflow.com/a/6969486/258462 .
+     *
+     * @name escapeRegExp
+     * @function
+     * @param {String} str The string in which to escape the special regular
+     * expression characters.
+     * @return {String} The escaped string.
+     */
+    function escapeRegExp(str) {
+        return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+    }
+
+    /*!
+     * replaceBeginningOfFieldPath
+     * Replaces the beginning of a field path which is the `before` string with
+     * the value of the `after` string.
+     *
+     * @name replaceBeginningOfFieldPath
+     * @function
+     * @param {String} s The field path in which to do the replacement.
+     * @param {String} before The beginning of the field path to search for.
+     * @param {String} after The string with which to replace the `before`
+     * string found at the beginning of `s`.
+     * @return {String} The string `s` with its beginning `before` replaced with
+     * `after`.
+     */
+    function replaceBeginningOfFieldPath(s, before, after) {
+        return s.replace(new RegExp("^" + escapeRegExp(before)), after);
+    }
+
     /**
      * $.fn.jsonEdit
      * Initializes the JSON editor on selected elements.
@@ -721,6 +753,8 @@
             // Also remove the column (field) from the array schema so
             // that the add new field button will work correctly, will
             // not add the deleted field to the new array items.
+
+            // The path to the field represented by the table.
             path = $table.attr("data-json-editor-path");
             name = $th.attr("data-json-editor-name");
             def = self.getDefinitionAtPath(path);
@@ -753,12 +787,20 @@
                         var $e = $(e);
                         $e.removeAttr("data-json-editor-path");
                         $e.removeAttr("data-json-editor-type");
-                        $e.find("[data-json-editor-path]")
-                                .each(function (ii, ee) {
-                            var $ee = $(ee);
-                            var p = $ee
-                                .attr("data-json-editor-path");
-                            $ee.attr("data-json-editor-path", path + "." + i);
+                        $e.children("td").each(function (ii, td) {
+                            var $ee = $(td)
+                                .find("[data-json-editor-path]:first");
+                            var oldPath = $ee.attr("data-json-editor-path");
+                            var newPath = path + "." + i;
+                            $ee.attr("data-json-editor-path", newPath);
+                            $ee.find("[data-json-editor-path]")
+                                .each(function (iii, eee) {
+                                    var $eee = $(eee);
+                                    $eee.attr("data-json-editor-path",
+                                            replaceBeginningOfFieldPath($eee
+                                                .attr("data-json-editor-path"),
+                                                oldPath, newPath));
+                                });
                         });
                     });
                     // Also update the row in the table footer.
