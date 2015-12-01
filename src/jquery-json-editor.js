@@ -2811,8 +2811,16 @@
         "boolean":  $("<div>").append($("<label>")),
         "string":   $("<div>").append($("<label>")),
         "regexp":   $("<div>").append($("<label>")),
+        // For types "array" and "object" we do not use a label because inside
+        // fields of type "array" and "object" there can be other "arrays" and
+        // the <label> element would send a click event to either the first
+        // field inside the "object" field which would scroll the page when the
+        // field of type "object" is big, or to the buttons inside the <table>
+        // representation of the field of type "array", when that <table>
+        // represents the first field inside the parent field, every time the
+        // user would click inside that field of type "array" or "object".
         "array":    $("<div>"),
-        "object":   $("<div>").append($("<label>")),
+        "object":   $("<div>"),
         "date":     $("<div>").append($("<label>"))
     };
 
