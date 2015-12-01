@@ -616,7 +616,7 @@
                 subDef.path = p + "." + fieldName;
                 if (subDef.type === "object" ||
                         subDef.type === "array") {
-                    process(subDef);
+                    updateDescendantDefPaths(subDef);
                 }
             }
         }
