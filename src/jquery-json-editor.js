@@ -2268,6 +2268,13 @@
                 };
             }
 
+            // Remove all the array indices and "+" signs from the path. The
+            // `getDefinitionAtPath` function returns field definitions, not
+            // field instance definitions, and those are found in the
+            // `settings.schema` variable which does not contain any array
+            // indices or "+" signs.
+            path = path.replace(/\.(\d+|\+)\./g, ".");
+
             fieldPathParts = path.split(".");
             currentPart = fieldPathParts[0];
             currentVal = settings.schema[currentPart];
@@ -2396,7 +2403,9 @@
             // `path` from the `settings.schema` variable.
             arrayFieldDef = self.getDefinitionAtPath(path);
 
-            $tbody = $elm.find("tbody");
+            // Here we intentionally use the jQuery `children` method instead of
+            // the `find` method because an array can contain other arrays.
+            $tbody = $elm.children("tbody");
             // The index of the newly added row, used in the paths
             nextIndex = $tbody.children().length;
             $tr = $("<tr>").appendTo($tbody);
@@ -2407,7 +2416,10 @@
                 // then this is an array table with a single column
                 var newSchema = $.extend(true, {}, arrayFieldDef.schema, {
                     type: getTypeOf(data),
-                    path: arrayFieldDef.path + "." + nextIndex,
+                    // In this line of code we use `path`, not
+                    // `arrayFieldDef.path` because `path` also contains table
+                    // indices and "+" signs.
+                    path: path + "." + nextIndex,
                     data: data
                 });
                 delete newSchema.label;
@@ -2439,9 +2451,11 @@
                 for (var i = 0; i < fields.length; ++i) {
                     // The schema of the current field
                     var sch = arrayFieldDef.schema[fields[i]];
-                    // The path of the current field
-                    var currentFieldPath = arrayFieldDef.path + "." +
-                        nextIndex + "." + fields[i];
+                    // This is the path of the current field, and is expressed
+                    // in function of `path` not of `arrayFieldDef.path` because
+                    // `path` also contains array indices and "+" signs.
+                    var currentFieldPath = path + "." + nextIndex + "." +
+                        fields[i];
 
                     var newSchema = $.extend(true, {}, sch, {
                         path: currentFieldPath,
@@ -2622,6 +2636,13 @@
                 // and the newly added rows are added using the `add` method
                 // which also sets the values.
                 if (type === "array") {
+                    // Below we use the `length` property of the `val` variable
+                    // so if the type of the field is "array" we use the default
+                    // value of an empty array.
+                    if (typeof val === "undefined") {
+                        val = [];
+                    }
+
                     var $tbody = $this.children("tbody");
 
                     // Remove extra unnecessary table rows.

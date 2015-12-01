@@ -45,7 +45,7 @@ a = {
         editableObject: {
             "you can edit this field": "and this value"
         },
-        preferredMusicGenre: "Classical",
+        preferredMusicGenre: "classical",
         editableObjectWithPossibleAnswers: {
             "random number": 3,
             "another field with editable name": "value"
@@ -66,7 +66,10 @@ a = {
                             muzzle: true,
                             collar: true,
                             clothes: true,
-                            toys: true
+                            toys: [
+                                { name: "ball", quantity: 2 },
+                                { name: "frisbee", quantity: 1 }
+                            ]
                         }
                     },
                     {
@@ -77,7 +80,9 @@ a = {
                             muzzle: true,
                             collar: true,
                             clothes: false,
-                            toys: false
+                            toys: [
+                                { name: "ball", quantity: 1 }
+                            ]
                         }
                     }
                 ]
@@ -133,13 +138,13 @@ a = {
         preferredMusicGenre: {
             label: "Preferred music genre",
             possible: [
-                "Blues",
-                "Classical",
-                "Electronic",
-                "Folk",
-                "Hip hop",
-                "Pop",
-                "Rock"
+                "blues",
+                "classical",
+                "electronic",
+                "folk",
+                "hip hop",
+                "pop",
+                "rock"
             ]
         },
         editableObjectWithPossibleAnswers: {
@@ -200,7 +205,16 @@ a = {
                                         muzzle: { label: "Muzzle" },
                                         collar: { label: "Collar" },
                                         clothes: { label: "Clothes" },
-                                        toys: { label: "Toys" }
+                                        toys: {
+                                            label: "Toys",
+                                            schema: {
+                                                _order: ["name", "quantity"],
+                                                name: { label: "Name",
+                                                    possible: [ "ball",
+                                                    "frisbee" ] },
+                                                quantity: { label: "Quantity" }
+                                            }
+                                        }
                                     }
                                 }
                             }
