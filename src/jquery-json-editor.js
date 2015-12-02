@@ -697,10 +697,12 @@
          * @return {undefined}
          */
         function deleteControlsColumn($table) {
-            $table.find("tbody > tr").each(function (i, e) {
+            // We do not use a simpler selector with the jQuery `find` method
+            // because we do not want to remove cells from nested tables.
+            $table.children("tbody").children("tr").each(function (i, e) {
                 $(e).children("td:last").remove();
             });
-            $table.find("tfoot > tr").each(function (i, e) {
+            $table.children("tfoot").children("tr").each(function (i, e) {
                 $(e).children("td:last").remove();
             });
             addControlsToLastColumn($table);
@@ -743,10 +745,16 @@
             var i = $th.index();
             // Get the table containing the `$th`.
             var $table = $tr.closest("table");
-            // :nth-child selector uses 1-based indices. Select all the
-            // table cells with the index (i + 1) inside the parent
-            // rows, then remove them from the document.
-            $table.find("td:nth-child(" + (i + 1) + ")").remove();
+            // :nth-child selector uses 1-based indices. Select all the table
+            // cells with the index (i + 1) inside the parent rows in the table
+            // body and in the table footer, then remove them from the document.
+            // We do not use a simpler selector with the jQuery `find` method
+            // because we do not want to remove cells from tables inside this
+            // table's cells (which are the cells of `$table`).
+            $table.children("tbody").children("tr")
+                .children("td:nth-child(" + (i + 1) + ")").remove();
+            $table.children("tfoot").children("tr")
+                .children("td:nth-child(" + (i + 1) + ")").remove();
             // Also remove the column header `$th`.
             $th.remove();
 
@@ -783,7 +791,11 @@
 
                     // Update the UI (the table rows in the table body) to
                     // represent the new schema.
-                    $table.find("tbody > tr").each(function (i, e) {
+                    // Here we do not use a simpler selector with the jQuery
+                    // `find` method because we do not want to affect nested
+                    // tables.
+                    $table.children("tbody").children("tr")
+                            .each(function (i, e) {
                         var $e = $(e);
                         $e.removeAttr("data-json-editor-path");
                         $e.removeAttr("data-json-editor-type");
@@ -804,7 +816,10 @@
                         });
                     });
                     // Also update the row in the table footer.
-                    $tfootRow = $table.find("tfoot > tr");
+                    // Here we do not use a simpler selector with the jQuery
+                    // `find` method because we do not want to affect nested
+                    // tables.
+                    $tfootRow = $table.children("tfoot").children("tr");
                     $tfootRow.removeAttr("data-json-editor-path");
                     $tfootRow.removeAttr("data-json-editor-type");
                     $tfootInput = $tfootRow.find("[data-json-editor-path]");
@@ -862,10 +877,14 @@
          * @return {undefined}
          */
         function addControlsToLastColumn($table) {
-            $table.find("tbody > tr > td:last-child").each(function (i, e) {
+            // Here we must keep the code working well in the case of nested
+            // tables.
+            $table.children("tbody").children("tr").children("td:last-child")
+                    .each(function (i, e) {
                 $(e).append(createDeleteButton($table));
             });
-            $table.find("tfoot > tr:first > td:last").each(function (i, e) {
+            $table.children("tfoot").children("tr:first").children("td:last")
+                    .each(function (i, e) {
                 $(e).append(createAddButton($table));
             });
         }
