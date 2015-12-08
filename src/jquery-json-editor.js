@@ -420,6 +420,30 @@
         return s.replace(new RegExp("^" + escapeRegExp(before)), after);
     }
 
+    /*!
+     * jQueryClosestDescendant
+     * Origin: http://stackoverflow.com/a/8962023/258462
+     *
+     * @name jQueryClosestDescendant
+     * @function
+     * @param {jQuery} $e The jQuery elements in which to search the closest
+     * descendant matching the specified filter.
+     * @param {String} filter The filter with which to test the descendants.
+     * @return {jQuery} The closest descendant in the `$e` element matching the
+     * `filter` selector.
+     */
+    function jQueryClosestDescendant($e, filter) {
+        var $found = $(),
+            $currentSet = $e; // Current place
+        while ($currentSet.length) {
+            $found = $currentSet.filter(filter);
+            if ($found.length) break;  // At least one match: break loop
+            // Get all children of the current set
+            $currentSet = $currentSet.children();
+        }
+        return $found.first(); // Return first match of the collection
+    }
+
     /**
      * $.fn.jsonEdit
      * Initializes the JSON editor on selected elements.
@@ -822,10 +846,22 @@
                     $tfootRow = $table.children("tfoot").children("tr");
                     $tfootRow.removeAttr("data-json-editor-path");
                     $tfootRow.removeAttr("data-json-editor-type");
-                    $tfootInput = $tfootRow.find("[data-json-editor-path]");
+                    $tfootInput = $tfootRow.find("[data-json-editor-path]:first");
+                    var p = $tfootInput.attr("data-json-editor-path");
                     $tfootInput.attr("data-json-editor-path", path + ".+");
+                    $tfootInput.find("[data-json-editor-path]").each(
+                            function (i, e) {
+                        $e = $(e);
+                        $e.attr("data-json-editor-path",
+                                replaceBeginningOfFieldPath(
+                                    $e.attr("data-json-editor-path"),
+                                    p, path + ".+"));
+
+
+                    });
                     // Also update the row in the table header.
-                    $table.find("thead:first > tr:first > th:first")
+                    $table.children("thead:first").children("tr:first")
+                        .children("th:first")
                         .attr("data-json-editor-name", "");
 
                     def.schema = def.schema[order[0]];
@@ -854,11 +890,11 @@
             // the <td>s from the deleted column (or, when adding a new column
             // to a table with a single column, which existed only in the old
             // single column).
-            $table.find("tbody > tr").each(function (i, e) {
+            $table.children("tbody").children("tr").each(function (i, e) {
                 $(e).append($("<td>").append(
                             createDeleteButton($table)));
             });
-            $table.find("tfoot > tr").each(function (i, e) {
+            $table.children("tfoot").children("tr").each(function (i, e) {
                 $(e).append($("<td>").append(
                             createAddButton($table)));
             });
@@ -1552,11 +1588,15 @@
                                  * the new column.
                                  */
                                 function addNewColumn($table, newDef) {
-                                    var $trs = $table.find("tbody > tr");
+                                    // We must keep the code below compatible
+                                    // with the possible nested tables.
+                                    var $trs = $table.children("tbody")
+                                        .children("tr");
                                     var $tds, $cellEditor, $tfootRow;
                                     // First add the column header.
-                                    $table.find("thead > tr:first > th:last")
-                                        .before(createColumnHeader(newDef));
+                                    $table.children("thead").children("tr:first")
+                                        .children("th:last").before(
+                                                createColumnHeader(newDef));
                                     // For each row in the table body.
                                     for (var i = 0; i < $trs.length; i++) {
                                         var $tr = $trs.eq(i);
@@ -1573,7 +1613,8 @@
                                         }
                                     }
                                     // Do the same for the table footer row.
-                                    $tfootRow = $table.find("tfoot > tr:first");
+                                    $tfootRow = $table.children("tfoot")
+                                        .children("tr:first");
                                     $tds = $tfootRow.children("td");
                                     $cellEditor = createNewCellEditor("+");
                                     if ($tds.length > 0) {
@@ -1616,49 +1657,82 @@
                                             sch.name ||
                                             settings.defaultArrayFieldLabel;
 
-                                        // Update the UI (the table rows in the
-                                        // table body) to represent the new
-                                        // field definition which now contains a
-                                        // new field in its schema.
-                                        $parent.find("tbody > tr").each(
-                                                function (i, e) {
-                                            var $e = $(e);
-                                            $e.attr({
+                                        var attrToChange = "data-json-editor-path"; // TODO: make this string configurable
+
+                                        // Update the UI (the UI is represented
+                                        // by the table rows in the table body)
+                                        // to represent the new field definition
+                                        // which now contains a new field in its
+                                        // schema.
+                                        $parent.children("tbody").children("tr")
+                                                .each(function (i, tr) {
+                                            var $tr = $(tr);
+                                            $tr.attr({
                                                 "data-json-editor-path":
                                                     definition.path + "." + i,
                                                 "data-json-editor-type": "object"
                                             });
-                                            $e.find("[data-json-editor-path]")
-                                                    .each(function (ii, ee) {
-                                                var $ee = $(ee);
-                                                var p = $ee
-                                                    .attr("data-json-editor-path");
-                                                $ee.attr("data-json-editor-path",
-                                                        p + "." +
-                                                        nameOfTheSingleOldField);
+
+                                            var $td = $tr.children("td:first");
+                                            var $group = $td
+                                                .find("[data-json-editor-path]:first");
+                                            var p = $group.attr(attrToChange);
+                                            $group.attr(attrToChange, p +
+                                                    "." + nameOfTheSingleOldField);
+
+                                            $group.find("[data-json-editor-path^='" + p + "']")
+                                                    .each(function (iii, e) {
+                                                var $e = $(e);
+                                                $e.attr(attrToChange, replaceBeginningOfFieldPath(
+                                                            $e.attr(attrToChange), p,
+                                                            p + "." + nameOfTheSingleOldField));
                                             });
                                         });
                                         // Also update the row in the table footer.
-                                        $tfootRow = $parent.find("tfoot > tr");
+                                        $tfootRow = $parent.children("tfoot:first")
+                                            .children("tr:first");
                                         $tfootRow.attr({
                                             "data-json-editor-path":
                                                 definition.path + ".+",
                                             "data-json-editor-type": "object"
                                         });
-                                        $tfootInput = $tfootRow.find("[data-json-editor-path]");
+
+                                        $tfootInput = $tfootRow
+                                            .children("td:first")
+                                            .find("[data-json-editor-path]:first");
+                                        var p = $tfootInput.attr("data-json-editor-path");
                                         $tfootInput.attr("data-json-editor-path",
-                                                $tfootInput.attr("data-json-editor-path") +
-                                                "." + nameOfTheSingleOldField);
+                                                p + "." + nameOfTheSingleOldField);
+                                        $tfootInput.find("[data-json-editor-path^='" + p + "']")
+                                                .each(function (i, e) {
+                                            var $e = $(e);
+                                            $e.attr(attrToChange, replaceBeginningOfFieldPath(
+                                                        $e.attr(attrToChange),
+                                                        p, p + "." +
+                                                        nameOfTheSingleOldField));
+                                        });
                                         // Also update the row in the table header.
-                                        $parent.find("thead:first > tr:first > th:first")
+                                        $parent.children("thead:first")
+                                            .children("tr:first")
+                                            .children("th:first")
                                             .attr("data-json-editor-name",
                                                     nameOfTheSingleOldField);
 
                                         // Delete the controls from the only column
                                         // of the table because they will be added
                                         // in a new column.
-                                        $parent.find("tr > td:nth-child(1) [data-json-editor-control]")
-                                            .remove();
+                                        $parent.children("*").children("tr")
+                                            .children("td:nth-child(1)")
+                                                .each(function (i, td) {
+                                            // Here we do not use the jQuery
+                                            // `find` method with the `:first`
+                                            // selector because we only delete
+                                            // the only control closest to the
+                                            // table cell.
+                                            jQueryClosestDescendant($(td),
+                                                    "[data-json-editor-control]")
+                                                .remove();
+                                        });
 
                                         // Add a new column with controls (add,
                                         // delete).
@@ -2299,7 +2373,16 @@
             currentVal = settings.schema[currentPart];
             for (var i = 1; i < fieldPathParts.length; i++) {
                 currentPart = fieldPathParts[i];
-                currentVal = currentVal.schema[currentPart];
+                // If the schema of the current field definition has a single
+                // field
+                if (typeof currentVal.schema.type === "string") {
+                    currentVal = currentVal.schema;
+                    i--;
+                // Else if the schema is empty or contains more than one field
+                } else {
+                    // This value can be undefined
+                    currentVal = currentVal.schema[currentPart];
+                }
             }
             return currentVal;
         };
@@ -2709,6 +2792,49 @@
                 includeFieldsBeingEdited) {
             var directValue, data, selector;
 
+            /*!
+             * analyzePath
+             * Returns the processed field path computed by analyzing `p`, or
+             * `undefined` if the path is to be ignored. The processed field
+             * path is `p` after `path` is deleted from its beginning and after
+             * the potential dot character at the beginning of it is deleted.
+             *
+             * @name analyzePath
+             * @function
+             * @param {String} path The field path from which the data is to be
+             * extracted.
+             * @param {String} p The field path to be processed, specified in
+             * the `data-json-editor-path` attribute on the current field jQuery
+             * input element.
+             * @param {Boolean} includeNewItemEditors If not true, new item
+             * editors (inputs for fields with paths starting with +.,
+             * containing .+. or ending with .+) are not included in the
+             * extracted data, so if the path `p` is the path of a new field
+             * editor this function will return `undefined`.
+             * @return {String|undefined} The field path `p` after it is
+             * processed, or if the path `p` is not of a field from which data
+             * should be extracted, `undefined`.
+             */
+            function analyzePath(path, p, includeNewItemEditors) {
+                // If the current path does not start with the given path (which
+                // is by default an empty string), return.
+                if (p.substring(0, path.length) !== path) { return; }
+                // Remove the given path from the path of the current data in
+                // the final data object.
+                p = p.substring(path.length);
+                // If the given path is not a direct value
+                if (p.length > 0 && path.length > 0) {
+                    // remove the . character at the beginning
+                    p = p.substring(1);
+                }
+
+                // If includeNewItemEditors is not true and this is the path of
+                // a new item editor in a table, skip.
+                if (!includeNewItemEditors && /(^\+\.|\.\+$|\.\+\.)/.test(p)) { return; }
+
+                return p;
+            }
+
             path = path || "";
             root = root || self.container;
 
@@ -2729,21 +2855,8 @@
                 var type = $this.attr("data-json-editor-type");
 
                 var p = $this.attr("data-json-editor-path");
-                // If the current path does not start with the given path (which
-                // is by default an empty string), return.
-                if (p.substring(0, path.length) !== path) { return; }
-                // Remove the given path from the path of the current data in
-                // the final data object.
-                p = p.substring(path.length);
-                // If the given path is not a direct value
-                if (p.length > 0 && path.length > 0) {
-                    // remove the . character at the beginning
-                    p = p.substring(1);
-                }
-
-                // If includeNewItemEditors is not true and this is the path of
-                // a new item editor in a table, skip.
-                if (!includeNewItemEditors && /(\.\+$|\.\+\.)/.test(p)) { return; }
+                p = analyzePath(path, p, includeNewItemEditors);
+                if (!p) return;
 
                 // If `type` is "array" we set the value to an empty array to be
                 // sure that an array with no elements will still be in the
@@ -2776,9 +2889,14 @@
             // Handle fields with editable names.
             $("[data-json-object-key]", root).each(function () {
                 var $this = $(this);
-                var path = $this.attr("data-json-key-path");
-                var value = data[path];
-                delete data[path];
+
+                // The path to the field with editable key
+                var p = $this.attr("data-json-key-path");
+                p = analyzePath(path, p, includeNewItemEditors);
+                if (!p) return;
+
+                var value = data[p];
+                delete data[p];
                 data[$this.val()] = value;
             });
 
