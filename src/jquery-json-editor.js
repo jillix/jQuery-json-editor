@@ -867,7 +867,7 @@
                     def.schema = def.schema[order[0]];
                 }
             } else {
-                removeAllNestedFields(def);
+                deleteAllNestedFields(def);
                 addColumnWithControls($table);
             }
         }
@@ -2423,9 +2423,10 @@
         /**
          * resetPathIndicesInTable
          * If a table contains these paths: `hobbies.0`, `hobbies.2` without
-         * `hobbies.1`, after calling this function, the `hobbies.2` paths will
-         * be replaced with `hobbies.1` paths. This function is called afer
-         * deleting a row in a table, in a callback in the `add` function.
+         * `hobbies.1`, after calling this function, the `hobbies.2` paths
+         * (including the paths of the subfields) will be replaced with
+         * `hobbies.1` paths. This function is called afer deleting a row in a
+         * table, in a callback in the `add` method.
          *
          * @name resetPathIndicesInTable
          * @function
@@ -2434,45 +2435,76 @@
          * @return {undefined}
          */
         self.resetPathIndicesInTable = function (path) {
+            // The HTML attribute in which to search the field paths
+            var attrToChange = "data-json-editor-path";
+
             var $table;
+            // If `path` is a jQuery element
             if (path.constructor === jQuery) {
+                // The searched <table> element will be the element indicated by
+                // `path`
                 $table = path;
-                path = $table.attr("data-json-editor-path");
+                // And the path to the table is extracted from this jQuery
+                // element
+                path = $table.attr(attrToChange);
+            // Else if `path` is a string
             } else {
-                $table = $("table[data-json-editor-path='" + path + "']", self.container);
+                // Use a selector to find the searched <table> element in the
+                // `self.container` element
+                $table = $("table[data-json-editor-path='" + path + "']",
+                        self.container);
             }
 
             // For each row in the table
             $table.children("tbody").children("tr").each(function (i, tr) {
                 var $tr = $(tr);
+                // The first element with path is either a descendant of the
+                // `$tr` element (which is the current table row) or the `$tr`
+                // element itself.
                 var $firstElementWithPath = $tr
-                    .find("[data-json-editor-path]:first");
+                    .find("[data-json-editor-path]:first")
+                    .addBack("[data-json-editor-path]:first").first();
                 var currentIndex;
                 // If there is no element with path in this row, it means that
                 // this row does not have cells for any column so we can skip
-                // it.
+                // it and all the remaining rows in the table body
                 if ($firstElementWithPath.length === 0) {
-                    return;
+                    return false; // Break the jQuery `.each` loop
                 }
-                // get the index in the paths under the current row
+
+                // Get the index in the paths under the current row, in 4 steps
+                // 1. Get the path of the first element with path in the current
+                // row
                 currentIndex = $firstElementWithPath
                     .attr("data-json-editor-path");
+                // 2. Remove the path of the table from the beginning of the
+                // current index string
                 currentIndex = currentIndex.substring(path.length + 1);
+                // 3. Remove all the characters after and including the first dot
+                // character in the current index string
                 currentIndex = currentIndex.replace(/\..*$/, "");
+                // 4. Convert the current index string to an integer
                 currentIndex = parseInt(currentIndex);
-                // if the index in the paths is different than the index of the
+
+                // If the index in the paths is different than the index of the
                 // row
                 if (i !== currentIndex) {
-                    // for each subelement with a path
-                    $tr.find("[data-json-editor-path]").each(function (ii, e) {
-                        var newPath = $(e).attr("data-json-editor-path");
-                        // replace in the path the old wrong index with the new
+                    // Update the path of the <tr> element, if there is a path
+                    // set directly on the <tr> element
+                    if ($tr.attr(attrToChange)) {
+                        $tr.attr(attrToChange, path + "." + i);
+                    }
+
+                    // For each subelement with a path
+                    $tr.find("[data-json-editor-path^='" + path + "." +
+                            currentIndex + "']").each(function (ii, e) {
+                        var $e = $(e);
+                        // Replace in the path the old wrong index with the new
                         // index
-                        newPath = newPath.replace(new RegExp("\\." +
-                                    currentIndex + "\\."), "." + i + ".");
-                        newPath = newPath.replace(new RegExp("\\." +
-                                    currentIndex + "$"), "." + i);
-                        $(e).attr("data-json-editor-path", newPath);
+                        $e.attr(attrToChange,
+                                replaceBeginningOfFieldPath($e.attr(
+                                        attrToChange), path + "." +
+                                    currentIndex, path + "." + i));
                     });
                 }
             });
@@ -2828,9 +2860,11 @@
                     p = p.substring(1);
                 }
 
-                // If includeNewItemEditors is not true and this is the path of
-                // a new item editor in a table, skip.
-                if (!includeNewItemEditors && /(^\+\.|\.\+$|\.\+\.)/.test(p)) { return; }
+                // If `includeNewItemEditors` is not true and this is the path
+                // of a new item editor in a table, skip.
+                if (!includeNewItemEditors && /(^\+\.|\.\+$|\.\+\.)/.test(p)) {
+                    return;
+                }
 
                 return p;
             }
@@ -2856,7 +2890,7 @@
 
                 var p = $this.attr("data-json-editor-path");
                 p = analyzePath(path, p, includeNewItemEditors);
-                if (!p) return;
+                if (typeof p !== "string") return;
 
                 // If `type` is "array" we set the value to an empty array to be
                 // sure that an array with no elements will still be in the
@@ -2893,7 +2927,7 @@
                 // The path to the field with editable key
                 var p = $this.attr("data-json-key-path");
                 p = analyzePath(path, p, includeNewItemEditors);
-                if (!p) return;
+                if (typeof p !== "string") return;
 
                 var value = data[p];
                 delete data[p];
