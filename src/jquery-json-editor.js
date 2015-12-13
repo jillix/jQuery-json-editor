@@ -1327,49 +1327,81 @@
                         // that is the parent of the new/edited field.
                         definition = self.getDefinitionAtPath(path);
                         sch = definition.schema;
+
                         // The type can be "object", "array" or an elementary
                         // type (string, date etc.). See the
                         // `knownElementaryFieldTypes` variable for the
                         // elementary types.
+                        // If a field of type "object" is added or edited in a
+                        // table (a field of type "array") or in a field of type
+                        // "object" with 0, 1 or more subfields
                         if (type === "object") {
                             deleteAllNestedFields(newFieldDef);
 
-                            // If the field editor is inside a table
+                            // If the field editor is inside a table (array)
+                            // with 0, 1 or more subfields and an object is
+                            // added or edited in that table
                             if (inTable) {
-                                // If the array currently has a single field
+                                // If a field of type object is added or edited
+                                // inside an array (table) with a single
+                                // subfield
                                 if (typeof sch.type === "string") {
-                                    // If a new field is created
+                                    // If a new field of type "object" is
+                                    // created inside a table with a single
+                                    // subfield
                                     if (options.newFields) {
                                         // TODO: Not yet implemented.
-                                    // else if an existing field is edited
+                                    // Else if an existing field of type
+                                    // "object" or of another type is edited
+                                    // inside a table with a single subfield
+                                    // (which is the edited field) to become a
+                                    // field of type "object"
                                     } else {
                                         // TODO: Not yet implemented.
                                     }
-                                // If the array currently has no fields
+                                // If a field of type "object" is added or
+                                // edited inside an array (table) with no
+                                // subfields
                                 } else if (hasEmptySchema(definition)) {
-                                    // If a new field is created
+                                    // If a new field of type "object" is
+                                    // created inside an array (table) with no
+                                    // subfields
                                     if (options.newFields) {
                                         // TODO: Not yet implemented.
-                                    // else if an existing field is edited
+                                    // Else if an existing field of type
+                                    // "object" or of another type is edited
+                                    // inside an array (table) with no subfields
+                                    // to become a field of type "object" - an
+                                    // impossible situation
                                     } else {
                                         alert(settings.messages.
                                                 EDIT_FIELD_IN_ARRAY_WITHOUT_FIELDS);
                                     }
-                                // If the array currently has at least two
-                                // fields
+                                // If a field of type "object" is added or
+                                // edited inside an array (table) with at
+                                // least 2 subfields
                                 } else {
-                                    // If a new field is created
+                                    // If a new field of type "object" is
+                                    // created inside an array (table) with 2
+                                    // or more subfields
                                     if (options.newFields) {
                                         // TODO: Not yet implemented.
-                                    // else if an existing field is edited
+                                    // Else if an existing field of type
+                                    // "object" is edited inside an array
+                                    // (table) with 2 or more subfields
                                     } else {
                                         // TODO: Not yet implemented.
                                     }
                                 }
-                            // else if not in a table but in an object
+                            // If the field editor is inside an object and an
+                            // object is added or edited in that object which
+                            // has 0, 1 or more subfields
                             } else { // !inTable
                                 var order = sch[settings.orderProperty];
-                                // If a new field is created
+                                // If a new field of type "object" is created
+                                // inside an object (which means a field of type
+                                // "object") and the parent object has 0, 1 or
+                                // more subfields
                                 if (options.newFields) {
                                     // A new field of type object is added to an
                                     // object.
@@ -1377,7 +1409,11 @@
                                     // Insert the new field definition in the
                                     // `settings.schema` variable.
                                     sch[name] = newFieldDef;
-                                // else if an existing field is edited
+                                // Else if a field of type "object" or other
+                                // type is edited inside an object (which means
+                                // a field of type "object") to become a field
+                                // of type "object" and the parent object has 0,
+                                // 1 or more subfields
                                 } else {
                                     // A field of type object or other type is
                                     // edited to become a field of type object.
@@ -1431,47 +1467,79 @@
                                 // editor.
                                 $div.before(self.createGroup(newFieldDef));
                             }
-                        // the new field has the type "array"
+                        // Else if a field of type "array" is added or edited in
+                        // a table (a field of type "array") or in a field of
+                        // type "object" with 0, 1 or more subfields
                         } else if (type === "array") {
                             deleteAllNestedFields(newFieldDef);
 
-                            // If the field editor is inside a table
+                            // If the field editor is inside a table (array)
+                            // with 0, 1 or more subfields and a table is added
+                            // or edited in that table
                             if (inTable) {
-                                // If the parent array currently has a single
-                                // field
+                                // If the field editor is inside a table (array)
+                                // with a single subfield and a table is added
+                                // or edited in that table
                                 if (typeof sch.type === "string") {
-                                    // If a new field is created
+                                    // If the field editor is inside a table (array)
+                                    // with a single subfield and a table is added
+                                    // in that table
                                     if (options.newFields) {
                                         // TODO: Not yet implemented.
-                                    // else if an existing field is edited
+                                    // Else if the field editor is inside a
+                                    // table (array) with a single subfield and
+                                    // that subfield is edited to become a table
+                                    // or if it already is a table, its name
+                                    // and/or label is/are edited
                                     } else {
                                         // TODO: Not yet implemented.
                                     }
-                                // If the parent array currently has no fields
+                                // Else if the field editor is inside a table
+                                // (array) with no subfields and a table is
+                                // added or edited in that table
                                 } else if (hasEmptySchema(definition)) {
-                                    // If a new field is created
+                                    // If the field editor is inside a table
+                                    // (array) without any subfields and a table
+                                    // is added in that table
                                     if (options.newFields) {
                                         // TODO: Not yet implemented.
-                                    // else if an existing field is edited
+                                    // Else if the field editor is inside a
+                                    // table (array) without any subfields and
+                                    // an inexistent subfield is edited to
+                                    // become a table or if it already is a
+                                    // table, its name and/or label is/are
+                                    // edited - impossible situation
                                     } else {
                                         alert(settings.messages.
                                                 EDIT_FIELD_IN_ARRAY_WITHOUT_FIELDS);
                                     }
-                                // If the parent array currently has at least
-                                // two fields
+                                // Else if the field editor is inside a table
+                                // (array) with at least 2 subfields and a table
+                                // is added or edited in that table
                                 } else {
-                                    // If a new field is created
+                                    // If the field editor is inside a table
+                                    // (array) with at least 2 subfields and a
+                                    // table is added in that table
                                     if (options.newFields) {
                                         // TODO: Not yet implemented.
-                                    // else if an existing field is edited
+                                    // Else if the field editor is inside a
+                                    // table (array) with at least 2 subfields
+                                    // and one of its subfields is edited to
+                                    // become a table or if it already is a
+                                    // table, its name and/or label is/are
+                                    // edited
                                     } else {
                                         // TODO: Not yet implemented.
                                     }
                                 }
-                            // else if not in a table but in an object
+                            // Else if the field editor is inside an object with
+                            // 0, 1 or more subfields and a table is added or
+                            // edited in that object
                             } else { // !inTable
                                 var order = sch[settings.orderProperty];
-                                // If a new field is created
+                                // If the field editor is inside an object with
+                                // 0, 1 or more subfields and a table is added
+                                // in that object
                                 if (options.newFields) {
                                     // A new field of type array is added to an
                                     // object.
@@ -1479,7 +1547,12 @@
                                     // Insert the new field definition in the
                                     // `settings.schema` variable.
                                     sch[name] = newFieldDef;
-                                // else if an existing field is edited
+                                // Else if the field editor is inside an object
+                                // with 0, 1 or more subfields and a field of
+                                // type "array" (a table) or of another type is
+                                // edited in that object to become a table or if
+                                // it already is a table, to change its name
+                                // and/or label
                                 } else {
                                     var _path = $editedInput
                                         .attr("data-json-editor-path");
@@ -1532,7 +1605,10 @@
                                 // editor.
                                 $div.before(self.createGroup(newFieldDef));
                             }
-                        // type is an elementary type (not "object" or "array")
+                        // Else if a field of an elementary type (not "object"
+                        // or "array") is added or edited in a table (a field of
+                        // type "array") or in a field of type "object" with 0,
+                        // 1 or more subfields
                         } else {
                             newFieldDef.data = getDefaultValueForType(type);
 
@@ -1548,7 +1624,9 @@
                                 newFieldDef.possible = possibleValues;
                             }
 
-                            // If the field editor is inside a table
+                            // If a field of an elementary type (not "object" or
+                            // "array") is added or edited in a table (a field
+                            // of type "array") with 0, 1 or more subfields
                             if (inTable) {
                                 function createNewCellEditor(indexString) {
                                     var path2, sch2;
@@ -1624,17 +1702,21 @@
                                     }
                                 }
 
-                                // If the schema is not an object with multiple
-                                // fields or an empty object, but a single field,
+                                // If a field of an elementary type (not
+                                // "object" or "array") is added or edited in a
+                                // table (a field of type "array") with exactly
+                                // one subfield
                                 if (typeof sch.type === "string") {
-                                    // and if the current field editor just creates new
-                                    // fields (so it does not edit existing fields),
+                                    // If a field of an elementary type (not
+                                    // "object" or "array") is added in a table
+                                    // (a field of type "array") with exactly
+                                    // one subfield
                                     if (options.newFields) {
                                         var $tfootRow, $tfootInput;
 
-                                        // move the old single field inside a larger
-                                        // schema which also contains the newly created
-                                        // field.
+                                        // Move the old single field inside a
+                                        // larger schema which also contains the
+                                        // newly created field.
                                         var nameOfTheSingleOldField = sch.name ||
                                             settings.defaultArrayFieldName;
                                         definition.schema = {};
@@ -1647,10 +1729,11 @@
 
                                         schemaCoreFields(sch, definition.path +
                                                 ".");
-                                        // The call to `schemaCoreFields` also sets
-                                        // the label to the name
-                                        // `settings.defaultArrayFieldName` in some
-                                        // cases, but we can do better, we set it to
+                                        // The call to `schemaCoreFields` also
+                                        // sets the label to the name
+                                        // `settings.defaultArrayFieldName` in
+                                        // some cases, but we can do better, we
+                                        // set it to
                                         // `settings.defaultArrayFieldLabel` if
                                         // `sch` does not have a name set.
                                         sch[nameOfTheSingleOldField].label =
@@ -1739,15 +1822,23 @@
                                         addColumnWithControls($parent);
 
                                         addNewColumn($parent, newFieldDef);
+                                    // Else if a field of an elementary type
+                                    // (not "object" or "array") is edited in a
+                                    // table (a field of type "array") with
+                                    // exactly one subfield, the edited subfield
                                     } else {
                                         // TODO: The only field in the table is being
                                         // edited. Not yet implemented.
                                     }
-                                // else if the schema is empty (the array has no
-                                // fields)
+                                // Else if a field of an elementary type (not
+                                // "object" or "array") is added or edited in a
+                                // table (a field of type "array") without any
+                                // subfields
                                 } else if (hasEmptySchema(definition)) {
-                                    // A new field/column is added to a table
-                                    // without fields/columns.
+                                    // If a field of an elementary type (not
+                                    // "object" or "array") is added (as a new
+                                    // column) inside a table (a field of type
+                                    // "array") without any subfields (columns)
                                     if (options.newFields) {
                                         // The new column should not have the
                                         // attribute `data-json-editor-name` set in
@@ -1776,41 +1867,61 @@
                                         definition.schema = newFieldDef;
 
                                         deleteControlsColumn($parent);
-                                    // Else an existing field/column is edited in a
-                                    // table without fields/columns.
+                                    // Else if a field of an elementary type
+                                    // (not "object" or "array") is edited (as a
+                                    // column) inside a table (a field of type
+                                    // "array") without any subfields (columns)
+                                    // - impossible situation
                                     } else {
                                         alert(settings.messages.
                                                 EDIT_FIELD_IN_ARRAY_WITHOUT_FIELDS);
                                     }
-                                // else if the schema contains multiple fields
+                                // Else if a field of an elementary type (not
+                                // "object" or "array") is added or edited as a
+                                // column in a table (which is a field of type
+                                // "array") with 2 or more subfields
                                 } else {
-                                    // A new field is added to a table with multiple
-                                    // fields.
+                                    // If a field of an elementary type (not
+                                    // "object" or "array") is added as a column
+                                    // in a table (which is a field of type
+                                    // "array") with 2 or more subfields
                                     if (options.newFields) {
                                         // First update the schema.
                                         sch[settings.orderProperty].push(name);
                                         sch[name] = newFieldDef;
 
                                         addNewColumn($parent, newFieldDef);
-                                    // Else an existing field is edited in a table
-                                    // with multiple fields.
+                                    // Else if a field of an elementary type
+                                    // (not "object" or "array") is edited as a
+                                    // column in a table (which is a field of
+                                    // type "array") with 2 or more subfields
                                     } else {
                                         // TODO: Not yet implemented.
                                     }
                                 }
 
-                            // else if not in a table but in an object
+                            // Else if a field of an elementary type (not
+                            // "object" or "array") is added or edited in an
+                            // object (a field of type "object") with 0, 1 or
+                            // more subfields
                             } else {
                                 var order = sch[settings.orderProperty];
-                                // in the `settings.schema` variable store the
-                                // field definition without the (default) data.
+                                // In the `settings.schema` variable store the
+                                // field definition without the (default) data
                                 var newFieldDefWithoutData = $.extend(true, {},
                                         newFieldDef);
                                 delete newFieldDefWithoutData.data;
-                                // if a new field is created
+
+                                // If a field of an elementary type (not
+                                // "object" or "array") is added in an object (a
+                                // field of type "object") with 0, 1 or more
+                                // subfields
                                 if (options.newFields) {
                                     order.push(name);
-                                // else if an existing field is edited
+                                // Else if a field is edited to become a field
+                                // of an elementary type (not "object" or
+                                // "array") inside an object (a field of type
+                                // "object") with 0, 1 or more subfields
                                 } else {
                                     var _path = $editedInput
                                         .attr("data-json-editor-path");
