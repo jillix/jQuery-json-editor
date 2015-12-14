@@ -623,9 +623,13 @@
          * @return {undefined}
          */
         function updateDescendantDefPaths(def) {
-            var p = def.path;
+            var p;
 
+            // If the `def` field definition is of an elementary type (so it has
+            // no `schema` property of type "object") don't do anything
             if (typeof def.schema !== "object") return;
+
+            p = def.path;
 
             for (var fieldName in def.schema) {
                 var subDef;
@@ -737,6 +741,10 @@
          * Deletes all the nested fields inside a field definition. It works
          * only with fields of type "object" or "array" (it would not make sense
          * for fields of elementary types which cannot have nested fields).
+         * Using this function is a way to initialize the schema of a field of
+         * type "object" or "array". This means that we set the schema property
+         * of the field to an empty object and we set the
+         * `settings.orderProperty` property of the schema to an empty array.
          *
          * @name deleteAllNestedFields
          * @function
@@ -1024,7 +1032,7 @@
          * Updates the data of all the fields in the JSON editor which is stored
          * in `settings.data` variable and is used to fill the edited field
          * after changing its name. It also renames the field data in the
-         * `settings.data` variable if the new name is differend than the old
+         * `settings.data` variable if the new name is different than the old
          * name so that the new input group created with the call below to the
          * `createGroup` method will display the correct data. This function
          * needs to stay in the scope of the `settings.data` variable and of the
@@ -1047,9 +1055,9 @@
             // Update the default data used for the edited field's new input
             // group (which is the DOM representation of the field) and also
             // updates the default data for all the remaining fields in the JSON
-            // editor, taking the data from the way the input groups are
-            // currently filled in the UI by the end user or by the initial data
-            // offered to the JSON editor constructor.
+            // editor, taking the data from the way in which the input groups
+            // are currently filled in the UI by the end user or by the initial
+            // data offered to the JSON editor constructor.
             settings.data = self.getData(null, null,
                     null, true);
             // If the name (so also the path) of the field has been changed
@@ -1421,14 +1429,22 @@
                                     var _path = $editedInput.attr(
                                             "data-json-editor-path");
                                     var oldName = self.getNameFromPath(_path);
-                                    // Keep the schema of the old field
-                                    // definition (the fields in the object) in
-                                    // the new field definition because the
-                                    // field of type "object" is just edited
-                                    // (this means that only its name/path and
-                                    // label could be changed, not the fields in
-                                    // it).
-                                    newFieldDef.schema = sch[oldName].schema;
+
+                                    // If the old field definition had a schema
+                                    // (this is true if it was of type "object"
+                                    // or "array", so not of an elementary type)
+                                    if (typeof sch[oldName].schema === "object") {
+                                        // Keep the schema of the old field
+                                        // definition (the fields in the object)
+                                        // in the new field definition, because
+                                        // even if the type of the field was the
+                                        // same before the Save operation
+                                        // ("object"), the Save operation just
+                                        // updated the name, path or the label
+                                        // of the field and the subfields stay
+                                        // the same
+                                        newFieldDef.schema = sch[oldName].schema;
+                                    }
 
                                     // Also change the paths of the descendant
                                     // field definitions. For example if `_path`
@@ -1560,14 +1576,22 @@
                                     // type is edited to become a field of type
                                     // array. The field is inside an object.
                                     var oldName = self.getNameFromPath(_path);
-                                    // Keep the schema of the old field
-                                    // definition (the fields in the array) in
-                                    // the new field definition because the
-                                    // field of type "array" is just edited
-                                    // (this means that only its name/path and
-                                    // label could be changed, not the fields in
-                                    // it).
-                                    newFieldDef.schema = sch[oldName].schema;
+
+                                    // If the old field definition had a schema
+                                    // (this is true if it was of type "object"
+                                    // or "array", so not of an elementary type)
+                                    if (typeof sch[oldName].schema === "object") {
+                                        // Keep the schema of the old field
+                                        // definition (the fields in the array)
+                                        // in the new field definition, because
+                                        // even if the type of the field was the
+                                        // same before the Save operation
+                                        // ("array"), the Save operation just
+                                        // updated the name, path or the label
+                                        // of the field and the subfields stay
+                                        // the same
+                                        newFieldDef.schema = sch[oldName].schema;
+                                    }
 
                                     // Also change the paths of the descendant
                                     // field definitions. For example if `_path`
