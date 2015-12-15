@@ -1034,12 +1034,14 @@
         /*!
          * updateAndRenameFieldData
          * Updates the data of all the fields in the JSON editor which is stored
-         * in `settings.data` variable and is used to fill the edited field
+         * in the `settings.data` variable and is used to fill the edited field
          * after changing its name. It also renames the field data in the
          * `settings.data` variable if the new name is different than the old
          * name so that the new input group created with the call below to the
-         * `createGroup` method will display the correct data. This function
-         * needs to stay in the scope of the `settings.data` variable and of the
+         * `createGroup` method in the calling function (which is the click
+         * handler of the "Add/Save field" button in the `createNewFieldEditor`
+         * function) will display the correct data. This function needs to stay
+         * in the scope of the `settings.data` variable and in the scope of the
          * `renameValueAtPath` function to work without errors.
          *
          * @name updateAndRenameFieldData
@@ -1778,6 +1780,8 @@
                                             sch.name ||
                                             settings.defaultArrayFieldLabel;
 
+                                        // The HTML attribute of the input
+                                        // groups containing the field paths
                                         var attrToChange = "data-json-editor-path"; // TODO: make this string configurable
 
                                         // Update the UI (the UI is represented
@@ -1785,25 +1789,62 @@
                                         // to represent the new field definition
                                         // which now contains a new field in its
                                         // schema.
+                                        // For each row in the table body
                                         $parent.children("tbody").children("tr")
                                                 .each(function (i, tr) {
+                                            // `tr` is the DOM element, we wrap
+                                            // it in a jQuery object
                                             var $tr = $(tr);
+                                            // We set the
+                                            // "data-json-editor-path" and
+                                            // "data-json-editor-type"
+                                            // attributes of the current row
+                                            // because after the new column is
+                                            // added the row will have more
+                                            // than one cells with input groups
+                                            // and in this case the <tr> element
+                                            // must specify that it has the type
+                                            // "object", this information is
+                                            // used in the `getData` method
                                             $tr.attr({
                                                 "data-json-editor-path":
                                                     definition.path + "." + i,
                                                 "data-json-editor-type": "object"
                                             });
 
+                                            // We take the first cell in the
+                                            // current row
                                             var $td = $tr.children("td:first");
+                                            // We take the first input group (an
+                                            // element with the
+                                            // "data-json-editor-path" attribute
+                                            // set) from the first cell in the
+                                            // current row
                                             var $group = $td
                                                 .find("[data-json-editor-path]:first");
+                                            // We extract the
+                                            // "data-json-editor-path" attribute
+                                            // from the first input group in the
+                                            // row, this path is of the form
+                                            // `pathToTheTable.i` where `i` is
+                                            // the index of the row in the table
+                                            // body
                                             var p = $group.attr(attrToChange);
+                                            // Then we set it to its old value +
+                                            // the name of the single old field
                                             $group.attr(attrToChange, p +
                                                     "." + nameOfTheSingleOldField);
 
                                             $group.find("[data-json-editor-path^='" + p + "']")
                                                     .each(function (iii, e) {
+                                                // `e` is the DOM element, we
+                                                // wrap it in a jQuery object
                                                 var $e = $(e);
+                                                // We change its
+                                                // "data-json-editor-path"
+                                                // attribute from beginning with
+                                                // `p` to beginning with
+                                                // `p.nameOfTheSingleOldField`
                                                 $e.attr(attrToChange, replaceBeginningOfFieldPath(
                                                             $e.attr(attrToChange), p,
                                                             p + "." + nameOfTheSingleOldField));
@@ -1832,7 +1873,10 @@
                                                         p, p + "." +
                                                         nameOfTheSingleOldField));
                                         });
-                                        // Also update the row in the table header.
+                                        // Also update the row in the table
+                                        // header (we must only change the
+                                        // attribute of the only <th> which is a
+                                        // column header)
                                         $parent.children("thead:first")
                                             .children("tr:first")
                                             .children("th:first")
@@ -1879,10 +1923,11 @@
                                     // "array") without any subfields (columns)
                                     if (options.newFields) {
                                         // The new column should not have the
-                                        // attribute `data-json-editor-name` set in
-                                        // the column header, so we clone the schema
-                                        // object and remove the name and path
-                                        // properties from it.
+                                        // attribute `data-json-editor-name` set
+                                        // in the column header, so we clone the
+                                        // field definition object and remove
+                                        // the `name` and `path` properties from
+                                        // it.
                                         var def = $.extend(true, {}, newFieldDef);
                                         delete def.name;
                                         delete def.path;
