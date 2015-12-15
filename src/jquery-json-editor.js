@@ -1634,8 +1634,6 @@
                         // type "array") or in a field of type "object" with 0,
                         // 1 or more subfields
                         } else {
-                            newFieldDef.data = getDefaultValueForType(type);
-
                             // If the possible values checkbox is enabled, add the
                             // entered possible values to the field definition.
                             if ($checkboxPossibleValues.prop("checked")) {
@@ -1724,6 +1722,18 @@
                                     } else {
                                         $tfootRow.append($cellEditor);
                                     }
+                                }
+
+                                // If a new field of an elementary type is added
+                                // in a table as a new column, the default data
+                                // of the input groups created under it should
+                                // be the default data for its type
+                                if (options.newFields) {
+                                    newFieldDef.data = getDefaultValueForType(type);
+                                // Else if a column of elementary type is edited
+                                // in a table
+                                } else {
+                                    // TODO: Not yet implemented.
                                 }
 
                                 // If a field of an elementary type (not
@@ -1926,9 +1936,42 @@
 
                             // Else if a field of an elementary type (not
                             // "object" or "array") is added or edited in an
-                            // object (a field of type "object") with 0, 1 or
-                            // more subfields
+                            // object (which means a field of type "object")
+                            // with 0, 1 or more subfields
                             } else {
+                                var _path = $editedInput
+                                    .attr("data-json-editor-path");
+                                var oldName = self.getNameFromPath(_path);
+
+                                // If a new field of an elementary type is added
+                                // in an object as a new subfield, the default
+                                // data of the input group created for it should
+                                // be the default data for its type
+                                if (options.newFields) {
+                                    newFieldDef.data = getDefaultValueForType(type);
+                                // Else if a subfield of an elementary type
+                                // inside an object is edited, do everything
+                                // possible to keep the old value
+                                } else {
+                                    // If the old field definition has the same
+                                    // type as the new field definition, keep
+                                    // the old value
+                                    // `type` is the same as `newFieldDef.type`.
+                                    if (sch[oldName].type === type) {
+                                        // Don't do anything here. Below the
+                                        // `updateAndRenameFieldData` function
+                                        // is called which sets the default data
+                                        // to the old value.
+                                    // Else, if the new field definition has a
+                                    // different type than the old field
+                                    // definition, do the same as if a new field
+                                    // would be created (instead of an existing
+                                    // field being edited)
+                                    } else {
+                                        newFieldDef.data = getDefaultValueForType(type);
+                                    }
+                                }
+
                                 var order = sch[settings.orderProperty];
                                 // In the `settings.schema` variable store the
                                 // field definition without the (default) data
@@ -1947,9 +1990,6 @@
                                 // "array") inside an object (a field of type
                                 // "object") with 0, 1 or more subfields
                                 } else {
-                                    var _path = $editedInput
-                                        .attr("data-json-editor-path");
-                                    var oldName = self.getNameFromPath(_path);
                                     delete sch[oldName];
                                     order[order.indexOf(oldName)] = name;
                                     updateAndRenameFieldData(_path, name);
