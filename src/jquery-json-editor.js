@@ -521,16 +521,20 @@
         };
 
         /*!
-         * schemaCoreFields
-         * Sets the core fields in schema.
+         * schemaCoreProperties
+         * Sets the core properties in a field definition schema if they are not
+         * set: `type` on fields with possible values that don't have it set,
+         * `schema` and the value of `settings.orderProperty` inside `schema` on
+         * fields of type "object" and "array", and on definitions of fields of
+         * elementary type: `name`, `path` and `label`.
          *
-         * @name schemaCoreFields
+         * @name schemaCoreProperties
          * @function
          * @param {Object} schema The current field schema object.
          * @param {String} path The path to the field value.
          * @return {undefined}
          */
-        function schemaCoreFields(schema, path) {
+        function schemaCoreProperties(schema, path) {
             path = path || "";
             for (var fieldName in schema) {
                 var currentFieldDef, defCanContainMoreFields;
@@ -540,9 +544,9 @@
                 // of these fields, and besides these, a property with the name
                 // stored in `settings.orderProperty` with the value being an
                 // array of 0 or more strings. This property is required in the
-                // schema resulted from the call to `schemaCoreFields` but it is
-                // optional in the schema passed to it which is the schema given
-                // by the user. This `for` loop ignores the existing order
+                // schema resulted from the call to `schemaCoreProperties` but
+                // it is optional in the schema passed to it which is the schema
+                // given by the user. This `for` loop ignores the existing order
                 // arrays inside the schemas.
                 if (!schema.hasOwnProperty(fieldName) ||
                         fieldName === settings.orderProperty) continue;
@@ -554,8 +558,8 @@
                 // If the schema can contain more fields,
                 if (defCanContainMoreFields) {
                     // recursively process them
-                    schemaCoreFields(currentFieldDef.schema, path + fieldName +
-                            ".");
+                    schemaCoreProperties(currentFieldDef.schema, path +
+                            fieldName + ".");
 
                 // If the type is not specified but a non-empty array of
                 // possible values is specified
@@ -1761,10 +1765,10 @@
                                         definition.schema[name] = newFieldDef;
                                         sch = definition.schema;
 
-                                        schemaCoreFields(sch, definition.path +
-                                                ".");
-                                        // The call to `schemaCoreFields` also
-                                        // sets the label to the name
+                                        schemaCoreProperties(sch,
+                                                definition.path + ".");
+                                        // The call to `schemaCoreProperties`
+                                        // also sets the label to the name
                                         // `settings.defaultArrayFieldName` in
                                         // some cases, but we can do better, we
                                         // set it to
@@ -3118,8 +3122,8 @@
         // Merge schema object
         settings.schema = mergeRecursive(sch(settings.data), settings.schema);
 
-        // Attach core fields to schema objects
-        schemaCoreFields(settings.schema);
+        // Attach core properties to schema objects
+        schemaCoreProperties(settings.schema);
 
         // Auto init
         if (settings.autoInit === true) {
