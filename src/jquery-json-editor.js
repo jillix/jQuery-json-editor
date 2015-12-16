@@ -1075,6 +1075,116 @@
         }
 
         /*!
+         * saveObjectOrArrayInObject
+         * Saves a new or edited object or array inside an object.
+         *
+         * @name saveObjectOrArrayInObject
+         * @function
+         * @param {Object} options An object containing the following
+         * properties:
+         *
+         * - `parentSchema` (Object): The schema of the parent field. The parent
+         *   field is expected by this function to be a field of type "object".
+         * - `orderProperty` (String): Contains the name of the property in the
+         *   field schemas which contains the array with the names of the fields
+         *   inside the schema in the order in which they should appear in the
+         *   user interface.
+         * - `newField` (Boolean): Whether the saved field is newly created (in
+         *   this case it has the value `true`) or edited (in this case it has
+         *   the value `false`).
+         * - `$editedInput` (jQuery): Optional, relevant only when the
+         *   `newField` option is set to `false`. It is the jQuery element
+         *   representing the input group that is being edited.
+         * - `newFieldDef` (Object): The JavaScript object representing the
+         *   definition of the saved field (which can be new or edited).
+         * - `$fieldEditorForm` (jQuery): The jQuery element representing the
+         *   form (which currently is always a `<div>`) used for creating or
+         *   editing the saved field (which is only of type "object" or "array"
+         *   in this function). This is used to position the saved field user
+         *   interface before the field editor.
+         * - `latestName` (String): The latest name of the saved field. It can
+         *   be the same as the old name if it was not changed in the field
+         *   editor.
+         *
+         * @return {undefined}
+         */
+        function saveObjectOrArrayInObject(options) {
+            var order = options.parentSchema[options.orderProperty];
+            // If a new field of type "object" or "array" is created inside an
+            // object (which means a field of type "object") and the parent
+            // object has 0, 1 or more subfields
+            if (options.newField) {
+                // A new field of type "object" or "array" is added to an object
+                // so add the name of the new field to the order array in the
+                // parent schema
+                order.push(options.latestName);
+                // Insert the new field definition in the `settings.schema`
+                // variable
+                options.parentSchema[options.latestName] = options.newFieldDef;
+            // Else if a field of type "object", "array" or of other type is
+            // edited inside an object (which means a field of type "object") to
+            // become a field of type "object" or "array" and the parent object
+            // has 0, 1 or more subfields (if it already is of type "object" or
+            // "array" the user through the field editor could have also changed
+            // its name, so also its path, or its label)
+            } else {
+                // A field of type "object", "array" or other type is edited to
+                // become a field of type "object" or "array".  The field is
+                // inside an object.
+                var _path = options.$editedInput.attr("data-json-editor-path");
+                var oldName = self.getNameFromPath(_path);
+
+                // If the old field definition had a schema (this is true if the
+                // old field definition was of type "object" or "array", so not
+                // of an elementary type)
+                if (typeof options.parentSchema[oldName].schema === "object") {
+                    // Keep the schema of the old field definition (the fields
+                    // in the object or in the array, depending on the type of
+                    // the field) in the new field definition, because even if
+                    // the type of the field was the same before the Save
+                    // operation ("object" or "array"), the Save operation just
+                    // updated the name, path or the label of the field and the
+                    // subfields, without talking about their paths, stay the
+                    // same
+                    options.newFieldDef.schema = options.parentSchema[oldName].
+                        schema;
+                }
+
+                // Also change the paths of the descendant field definitions.
+                // For example if `_path` is "first.second" (`oldName` is
+                // "second") and `name` is "third", the new path of the field
+                // will be "first.third" and lets say that the schema of this
+                // field contains a string field with path "first.second.test".
+                // After changing the path from "first.second" to "first.third",
+                // this string field should also change its path from
+                // "first.second.test" to "first.third.test".
+                updateDescendantDefPaths(options.newFieldDef);
+
+                // Insert the new field definition in the `settings.schema`
+                // variable, indirectly through the `options.parentSchema`
+                // variable which points to an object that is inside
+                // `settings.schema`.
+                options.parentSchema[options.latestName] = options.newFieldDef;
+
+                // If the name (so also the path) of the field has been changed,
+                // replace the old name with the new name in the order array and
+                // delete the old field definition with the old name from the
+                // parent schema.
+                if (options.latestName !== oldName) {
+                    order[order.indexOf(oldName)] = options.latestName;
+                    delete options.parentSchema[oldName];
+                }
+
+                updateAndRenameFieldData(_path, options.latestName);
+            }
+
+            // Create and show the UI for the field definition and add it before
+            // the field editor.
+            options.$fieldEditorForm.before(self.createGroup(options.
+                        newFieldDef));
+        }
+
+        /*!
          * createNewFieldEditor
          * Returns a jQuery object containing a new field editor.
          *
@@ -1411,83 +1521,15 @@
                             // object is added or edited in that object which
                             // has 0, 1 or more subfields
                             } else { // !inTable
-                                var order = sch[settings.orderProperty];
-                                // If a new field of type "object" is created
-                                // inside an object (which means a field of type
-                                // "object") and the parent object has 0, 1 or
-                                // more subfields
-                                if (options.newFields) {
-                                    // A new field of type object is added to an
-                                    // object.
-                                    order.push(name);
-                                    // Insert the new field definition in the
-                                    // `settings.schema` variable.
-                                    sch[name] = newFieldDef;
-                                // Else if a field of type "object" or other
-                                // type is edited inside an object (which means
-                                // a field of type "object") to become a field
-                                // of type "object" and the parent object has 0,
-                                // 1 or more subfields
-                                } else {
-                                    // A field of type object or other type is
-                                    // edited to become a field of type object.
-                                    // The field is inside an object.
-                                    var _path = $editedInput.attr(
-                                            "data-json-editor-path");
-                                    var oldName = self.getNameFromPath(_path);
-
-                                    // If the old field definition had a schema
-                                    // (this is true if it was of type "object"
-                                    // or "array", so not of an elementary type)
-                                    if (typeof sch[oldName].schema === "object") {
-                                        // Keep the schema of the old field
-                                        // definition (the fields in the object)
-                                        // in the new field definition, because
-                                        // even if the type of the field was the
-                                        // same before the Save operation
-                                        // ("object"), the Save operation just
-                                        // updated the name, path or the label
-                                        // of the field and the subfields stay
-                                        // the same
-                                        newFieldDef.schema = sch[oldName].schema;
-                                    }
-
-                                    // Also change the paths of the descendant
-                                    // field definitions. For example if `_path`
-                                    // is "first.second" (`oldName` is "second")
-                                    // and `name` is "third", the new path of
-                                    // the field will be "first.third" and lets
-                                    // say that the schema of this field
-                                    // contains a string field with path
-                                    // "first.second.test". After changing the
-                                    // path from "first.second" to
-                                    // "first.third", this string field should
-                                    // also change its path from
-                                    // "first.second.test" to
-                                    // "first.third.test".
-                                    updateDescendantDefPaths(newFieldDef);
-
-                                    // Insert the new field definition in the
-                                    // `settings.schema` variable.
-                                    sch[name] = newFieldDef;
-
-                                    // If the name (so also the path) of the
-                                    // field has been changed, replace the old
-                                    // name with the new name in the order array
-                                    // and delete the old field definition with
-                                    // the old name from the schema.
-                                    if (name !== oldName) {
-                                        order[order.indexOf(oldName)] = name;
-                                        delete sch[oldName];
-                                    }
-
-                                    updateAndRenameFieldData(_path, name);
-                                }
-
-                                // Create and show the UI for the field
-                                // definition and add it before the field
-                                // editor.
-                                $div.before(self.createGroup(newFieldDef));
+                                saveObjectOrArrayInObject({
+                                    parentSchema: sch,
+                                    orderProperty: settings.orderProperty,
+                                    newField: options.newFields,
+                                    $editedInput: $editedInput,
+                                    newFieldDef: newFieldDef,
+                                    $fieldEditorForm: $div,
+                                    latestName: name
+                                });
                             }
                         // Else if a field of type "array" is added or edited in
                         // a table (a field of type "array") or in a field of
@@ -1558,82 +1600,15 @@
                             // 0, 1 or more subfields and a table is added or
                             // edited in that object
                             } else { // !inTable
-                                var order = sch[settings.orderProperty];
-                                // If the field editor is inside an object with
-                                // 0, 1 or more subfields and a table is added
-                                // in that object
-                                if (options.newFields) {
-                                    // A new field of type array is added to an
-                                    // object.
-                                    order.push(name);
-                                    // Insert the new field definition in the
-                                    // `settings.schema` variable.
-                                    sch[name] = newFieldDef;
-                                // Else if the field editor is inside an object
-                                // with 0, 1 or more subfields and a field of
-                                // type "array" (a table) or of another type is
-                                // edited in that object to become a table or if
-                                // it already is a table, to change its name
-                                // and/or label
-                                } else {
-                                    var _path = $editedInput
-                                        .attr("data-json-editor-path");
-                                    // A field of type array, object or other
-                                    // type is edited to become a field of type
-                                    // array. The field is inside an object.
-                                    var oldName = self.getNameFromPath(_path);
-
-                                    // If the old field definition had a schema
-                                    // (this is true if it was of type "object"
-                                    // or "array", so not of an elementary type)
-                                    if (typeof sch[oldName].schema === "object") {
-                                        // Keep the schema of the old field
-                                        // definition (the fields in the array)
-                                        // in the new field definition, because
-                                        // even if the type of the field was the
-                                        // same before the Save operation
-                                        // ("array"), the Save operation just
-                                        // updated the name, path or the label
-                                        // of the field and the subfields stay
-                                        // the same
-                                        newFieldDef.schema = sch[oldName].schema;
-                                    }
-
-                                    // Also change the paths of the descendant
-                                    // field definitions. For example if `_path`
-                                    // is "first.second" (`oldName` is "second")
-                                    // and `name` is "third", the new path of
-                                    // the field will be "first.third" and lets
-                                    // say that the schema of this field
-                                    // contains a string field with path
-                                    // "first.second.test". After changing the
-                                    // path from "first.second" to
-                                    // "first.third", this string field should
-                                    // also change its path from
-                                    // "first.second.test" to
-                                    // "first.third.test".
-                                    updateDescendantDefPaths(newFieldDef);
-
-                                    // Insert the new field definition in the
-                                    // `settings.schema` variable.
-                                    sch[name] = newFieldDef;
-                                    // If the name (so also the path) of the
-                                    // field has been changed, replace the old
-                                    // name with the new name in the order array
-                                    // and delete the old field definition with
-                                    // the old name from the schema.
-                                    if (name !== oldName) {
-                                        order[order.indexOf(oldName)] = name;
-                                        delete sch[oldName];
-                                    }
-
-                                    updateAndRenameFieldData(_path, name);
-                                }
-
-                                // Create and show the UI for the field
-                                // definition and add it before the field
-                                // editor.
-                                $div.before(self.createGroup(newFieldDef));
+                                saveObjectOrArrayInObject({
+                                    parentSchema: sch,
+                                    orderProperty: settings.orderProperty,
+                                    newField: options.newFields,
+                                    $editedInput: $editedInput,
+                                    newFieldDef: newFieldDef,
+                                    $fieldEditorForm: $div,
+                                    latestName: name
+                                });
                             }
                         // Else if a field of an elementary type (not "object"
                         // or "array") is added or edited in a table (a field of
@@ -1988,10 +1963,6 @@
                             // object (which means a field of type "object")
                             // with 0, 1 or more subfields
                             } else {
-                                var _path = $editedInput
-                                    .attr("data-json-editor-path");
-                                var oldName = self.getNameFromPath(_path);
-
                                 // If a new field of an elementary type is added
                                 // in an object as a new subfield, the default
                                 // data of the input group created for it should
@@ -2039,6 +2010,14 @@
                                 // "array") inside an object (a field of type
                                 // "object") with 0, 1 or more subfields
                                 } else {
+                                    // `$editedInput` is defined only when
+                                    // `options.newFields` is false or, with
+                                    // other words, when an existing field is
+                                    // edited
+                                    var _path = $editedInput
+                                        .attr("data-json-editor-path");
+                                    var oldName = self.getNameFromPath(_path);
+
                                     delete sch[oldName];
                                     order[order.indexOf(oldName)] = name;
                                     updateAndRenameFieldData(_path, name);
