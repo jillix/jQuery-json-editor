@@ -574,8 +574,12 @@
                 currentFieldDef.name = fieldName;
 
                 // If `currentFieldDef` can contain more fields and it does not
-                // have the order of its fields specified,
+                // contain a single field (if it contains a single field
+                // `schema[settings.orderProperty]` should not exist) and it
+                // does not have the order of its fields specified (in
+                // `schema[settings.orderProperty]`),
                 if (defCanContainMoreFields &&
+                        typeof Object(currentFieldDef.schema).type !== "string" &&
                         !Array.isArray(Object(currentFieldDef.schema)
                             [settings.orderProperty])) {
                     // Generate an empty schema if there is no schema specified.
@@ -1409,6 +1413,234 @@
                         var name, label, type, inTable, newFieldDef,
                             definition, sch;
 
+                        /**
+                         * This function is used indirectly through the
+                         * `addNewColumn` function to add cells to a new column
+                         * in a table.
+                         */
+                        function createNewCellEditor(indexString) {
+                            var path2, sch2;
+                            path2 = (path ? path + "." : "") + indexString;
+                            // From the 3 possibilities: no field, one field
+                            // or many fields in the schema of the array
+                            // before the addition of the new column, the
+                            // name should be added to the path only when
+                            // the schema already contains one or more
+                            // fields. When it does not contain any fields,
+                            // the new field will be alone and its data will
+                            // be accessed directly from the only input in
+                            // that row.
+                            if (!hasEmptySchema(definition)) {
+                                path2 += "." + name;
+                            }
+                            sch2 = $.extend(true, {}, newFieldDef, {
+                                path: path2
+                            });
+                            delete sch2.label;
+                            delete sch2.deletable;
+                            delete sch2.editable;
+                            return $("<td>").append(self.createGroup(sch2));
+                        }
+
+                        /*!
+                         * addNewColumn
+                         * Creates and shows the UI for the new column in the
+                         * table. First adds a table column header then adds
+                         * empty inputs under it.
+                         *
+                         * @name addNewColumn
+                         * @function
+                         * @param {jQuery} $table The table element in which to
+                         * add the new column.
+                         * @param {Object} newDef The field definition of the
+                         * new column.
+                         */
+                        function addNewColumn($table, newDef) {
+                            // We must keep the code below compatible
+                            // with the possible nested tables.
+                            var $trs = $table.children("tbody")
+                                .children("tr");
+                            var $tds, $cellEditor, $tfootRow;
+                            // First add the column header.
+                            $table.children("thead").children("tr:first")
+                                .children("th:last").before(
+                                        createColumnHeader(newDef));
+                            // For each row in the table body.
+                            for (var i = 0; i < $trs.length; i++) {
+                                var $tr = $trs.eq(i);
+                                // Create a new cell editor.
+                                $cellEditor = createNewCellEditor(i.toString());
+                                $tds = $tr.children("td");
+                                // If there are cells in the row, put the
+                                // cell editor before the last cell.
+                                if ($tds.length > 0) {
+                                    $tds.eq(-1).before($cellEditor);
+                                // Else append the cell editor to the row.
+                                } else {
+                                    $tr.append($cellEditor);
+                                }
+                            }
+                            // Do the same for the table footer row.
+                            $tfootRow = $table.children("tfoot")
+                                .children("tr:first");
+                            $tds = $tfootRow.children("td");
+                            $cellEditor = createNewCellEditor("+");
+                            if ($tds.length > 0) {
+                                $tds.eq(-1).before($cellEditor);
+                            } else {
+                                $tfootRow.append($cellEditor);
+                            }
+                        }
+
+                        function prepareOnlyColumnForNewColumn() {
+                            var $tfootRow, $tfootInput;
+
+                            // Move the old single field inside a
+                            // larger schema which also contains the
+                            // newly created field.
+                            var nameOfTheSingleOldField = sch.name ||
+                                settings.defaultArrayFieldName;
+                            definition.schema = {};
+                            definition.schema[settings.orderProperty] =
+                                [nameOfTheSingleOldField, name];
+                            definition.schema[nameOfTheSingleOldField] =
+                                sch;
+                            definition.schema[name] = newFieldDef;
+                            sch = definition.schema;
+
+                            schemaCoreProperties(sch,
+                                    definition.path + ".");
+                            // The call to `schemaCoreProperties`
+                            // also sets the label to the name
+                            // `settings.defaultArrayFieldName` in
+                            // some cases, but we can do better, we
+                            // set it to
+                            // `settings.defaultArrayFieldLabel` if
+                            // `sch` does not have a name set.
+                            sch[nameOfTheSingleOldField].label =
+                                sch.name ||
+                                settings.defaultArrayFieldLabel;
+
+                            // The HTML attribute of the input
+                            // groups containing the field paths
+                            var attrToChange = "data-json-editor-path"; // TODO: make this string configurable
+
+                            // Update the UI (the UI is represented
+                            // by the table rows in the table body)
+                            // to represent the new field definition
+                            // which now contains a new field in its
+                            // schema.
+                            // For each row in the table body
+                            $parent.children("tbody").children("tr")
+                                    .each(function (i, tr) {
+                                // `tr` is the DOM element, we wrap
+                                // it in a jQuery object
+                                var $tr = $(tr);
+                                // We set the
+                                // "data-json-editor-path" and
+                                // "data-json-editor-type"
+                                // attributes of the current row
+                                // because after the new column is
+                                // added the row will have more
+                                // than one cells with input groups
+                                // and in this case the <tr> element
+                                // must specify that it has the type
+                                // "object", this information is
+                                // used in the `getData` method
+                                $tr.attr({
+                                    "data-json-editor-path":
+                                        definition.path + "." + i,
+                                    "data-json-editor-type": "object"
+                                });
+
+                                // We take the first cell in the
+                                // current row
+                                var $td = $tr.children("td:first");
+                                // We take the first input group (an
+                                // element with the
+                                // "data-json-editor-path" attribute
+                                // set) from the first cell in the
+                                // current row
+                                var $group = $td
+                                    .find("[data-json-editor-path]:first");
+                                // We extract the
+                                // "data-json-editor-path" attribute
+                                // from the first input group in the
+                                // row, this path is of the form
+                                // `pathToTheTable.i` where `i` is
+                                // the index of the row in the table
+                                // body
+                                var p = $group.attr(attrToChange);
+                                // Then we set it to its old value +
+                                // the name of the single old field
+                                $group.attr(attrToChange, p +
+                                        "." + nameOfTheSingleOldField);
+
+                                $group.find("[data-json-editor-path^='" + p + "']")
+                                        .each(function (iii, e) {
+                                    // `e` is the DOM element, we
+                                    // wrap it in a jQuery object
+                                    var $e = $(e);
+                                    // We change its
+                                    // "data-json-editor-path"
+                                    // attribute from beginning with
+                                    // `p` to beginning with
+                                    // `p.nameOfTheSingleOldField`
+                                    $e.attr(attrToChange, replaceBeginningOfFieldPath(
+                                                $e.attr(attrToChange), p,
+                                                p + "." + nameOfTheSingleOldField));
+                                });
+                            });
+                            // Also update the row in the table footer.
+                            $tfootRow = $parent.children("tfoot:first")
+                                .children("tr:first");
+                            $tfootRow.attr({
+                                "data-json-editor-path":
+                                    definition.path + ".+",
+                                "data-json-editor-type": "object"
+                            });
+
+                            $tfootInput = $tfootRow
+                                .children("td:first")
+                                .find("[data-json-editor-path]:first");
+                            var p = $tfootInput.attr("data-json-editor-path");
+                            $tfootInput.attr("data-json-editor-path",
+                                    p + "." + nameOfTheSingleOldField);
+                            $tfootInput.find("[data-json-editor-path^='" + p + "']")
+                                    .each(function (i, e) {
+                                var $e = $(e);
+                                $e.attr(attrToChange, replaceBeginningOfFieldPath(
+                                            $e.attr(attrToChange),
+                                            p, p + "." +
+                                            nameOfTheSingleOldField));
+                            });
+                            // Also update the row in the table
+                            // header (we must only change the
+                            // attribute of the only <th> which is a
+                            // column header)
+                            $parent.children("thead:first")
+                                .children("tr:first")
+                                .children("th:first")
+                                .attr("data-json-editor-name",
+                                        nameOfTheSingleOldField);
+
+                            // Delete the controls from the only column
+                            // of the table because they will be added
+                            // in a new column.
+                            $parent.children("*").children("tr")
+                                .children("td:nth-child(1)")
+                                    .each(function (i, td) {
+                                // Here we do not use the jQuery
+                                // `find` method with the `:first`
+                                // selector because we only delete
+                                // the only control closest to the
+                                // table cell.
+                                jQueryClosestDescendant($(td),
+                                        "[data-json-editor-control]")
+                                    .remove();
+                            });
+                        }
+
                         // Remove dots from the name and remove the whitespace
                         // around it.
                         $nameInput.val($nameInput.val()
@@ -1474,7 +1706,13 @@
                                     // created inside a table with a single
                                     // subfield
                                     if (options.newFields) {
-                                        // TODO: Not yet implemented.
+                                        prepareOnlyColumnForNewColumn();
+
+                                        // Add a new column with controls (add,
+                                        // delete).
+                                        addColumnWithControls($parent);
+
+                                        addNewColumn($parent, newFieldDef);
                                     // Else if an existing field of type
                                     // "object" or of another type is edited
                                     // inside a table with a single subfield
@@ -1631,80 +1869,6 @@
                             // "array") is added or edited in a table (a field
                             // of type "array") with 0, 1 or more subfields
                             if (inTable) {
-                                function createNewCellEditor(indexString) {
-                                    var path2, sch2;
-                                    path2 = (path ? path + "." : "") + indexString;
-                                    // From the 3 possibilities: no field, one field
-                                    // or many fields in the schema of the array
-                                    // before the addition of the new column, the
-                                    // name should be added to the path only when
-                                    // the schema already contains one or more
-                                    // fields. When it does not contain any fields,
-                                    // the new field will be alone and its data will
-                                    // be accessed directly from the only input in
-                                    // that row.
-                                    if (!hasEmptySchema(definition)) {
-                                        path2 += "." + name;
-                                    }
-                                    sch2 = $.extend(true, {}, newFieldDef, {
-                                        path: path2
-                                    });
-                                    delete sch2.label;
-                                    delete sch2.deletable;
-                                    delete sch2.editable;
-                                    return $("<td>").append(self.createGroup(sch2));
-                                }
-
-                                /*!
-                                 * addNewColumn
-                                 * Creates and shows the UI for the new column in
-                                 * the table. First adds a table column header then
-                                 * adds empty inputs under it.
-                                 *
-                                 * @name addNewColumn
-                                 * @function
-                                 * @param {jQuery} $table The table element in which
-                                 * to add the new column.
-                                 * @param {Object} newDef The field definition of
-                                 * the new column.
-                                 */
-                                function addNewColumn($table, newDef) {
-                                    // We must keep the code below compatible
-                                    // with the possible nested tables.
-                                    var $trs = $table.children("tbody")
-                                        .children("tr");
-                                    var $tds, $cellEditor, $tfootRow;
-                                    // First add the column header.
-                                    $table.children("thead").children("tr:first")
-                                        .children("th:last").before(
-                                                createColumnHeader(newDef));
-                                    // For each row in the table body.
-                                    for (var i = 0; i < $trs.length; i++) {
-                                        var $tr = $trs.eq(i);
-                                        // Create a new cell editor.
-                                        $cellEditor = createNewCellEditor(i.toString());
-                                        $tds = $tr.children("td");
-                                        // If there are cells in the row, put the
-                                        // cell editor before the last cell.
-                                        if ($tds.length > 0) {
-                                            $tds.eq(-1).before($cellEditor);
-                                        // Else append the cell editor to the row.
-                                        } else {
-                                            $tr.append($cellEditor);
-                                        }
-                                    }
-                                    // Do the same for the table footer row.
-                                    $tfootRow = $table.children("tfoot")
-                                        .children("tr:first");
-                                    $tds = $tfootRow.children("td");
-                                    $cellEditor = createNewCellEditor("+");
-                                    if ($tds.length > 0) {
-                                        $tds.eq(-1).before($cellEditor);
-                                    } else {
-                                        $tfootRow.append($cellEditor);
-                                    }
-                                }
-
                                 // If a new field of an elementary type is added
                                 // in a table as a new column, the default data
                                 // of the input groups created under it should
@@ -1727,152 +1891,7 @@
                                     // (a field of type "array") with exactly
                                     // one subfield
                                     if (options.newFields) {
-                                        var $tfootRow, $tfootInput;
-
-                                        // Move the old single field inside a
-                                        // larger schema which also contains the
-                                        // newly created field.
-                                        var nameOfTheSingleOldField = sch.name ||
-                                            settings.defaultArrayFieldName;
-                                        definition.schema = {};
-                                        definition.schema[settings.orderProperty] =
-                                            [nameOfTheSingleOldField, name];
-                                        definition.schema[nameOfTheSingleOldField] =
-                                            sch;
-                                        definition.schema[name] = newFieldDef;
-                                        sch = definition.schema;
-
-                                        schemaCoreProperties(sch,
-                                                definition.path + ".");
-                                        // The call to `schemaCoreProperties`
-                                        // also sets the label to the name
-                                        // `settings.defaultArrayFieldName` in
-                                        // some cases, but we can do better, we
-                                        // set it to
-                                        // `settings.defaultArrayFieldLabel` if
-                                        // `sch` does not have a name set.
-                                        sch[nameOfTheSingleOldField].label =
-                                            sch.name ||
-                                            settings.defaultArrayFieldLabel;
-
-                                        // The HTML attribute of the input
-                                        // groups containing the field paths
-                                        var attrToChange = "data-json-editor-path"; // TODO: make this string configurable
-
-                                        // Update the UI (the UI is represented
-                                        // by the table rows in the table body)
-                                        // to represent the new field definition
-                                        // which now contains a new field in its
-                                        // schema.
-                                        // For each row in the table body
-                                        $parent.children("tbody").children("tr")
-                                                .each(function (i, tr) {
-                                            // `tr` is the DOM element, we wrap
-                                            // it in a jQuery object
-                                            var $tr = $(tr);
-                                            // We set the
-                                            // "data-json-editor-path" and
-                                            // "data-json-editor-type"
-                                            // attributes of the current row
-                                            // because after the new column is
-                                            // added the row will have more
-                                            // than one cells with input groups
-                                            // and in this case the <tr> element
-                                            // must specify that it has the type
-                                            // "object", this information is
-                                            // used in the `getData` method
-                                            $tr.attr({
-                                                "data-json-editor-path":
-                                                    definition.path + "." + i,
-                                                "data-json-editor-type": "object"
-                                            });
-
-                                            // We take the first cell in the
-                                            // current row
-                                            var $td = $tr.children("td:first");
-                                            // We take the first input group (an
-                                            // element with the
-                                            // "data-json-editor-path" attribute
-                                            // set) from the first cell in the
-                                            // current row
-                                            var $group = $td
-                                                .find("[data-json-editor-path]:first");
-                                            // We extract the
-                                            // "data-json-editor-path" attribute
-                                            // from the first input group in the
-                                            // row, this path is of the form
-                                            // `pathToTheTable.i` where `i` is
-                                            // the index of the row in the table
-                                            // body
-                                            var p = $group.attr(attrToChange);
-                                            // Then we set it to its old value +
-                                            // the name of the single old field
-                                            $group.attr(attrToChange, p +
-                                                    "." + nameOfTheSingleOldField);
-
-                                            $group.find("[data-json-editor-path^='" + p + "']")
-                                                    .each(function (iii, e) {
-                                                // `e` is the DOM element, we
-                                                // wrap it in a jQuery object
-                                                var $e = $(e);
-                                                // We change its
-                                                // "data-json-editor-path"
-                                                // attribute from beginning with
-                                                // `p` to beginning with
-                                                // `p.nameOfTheSingleOldField`
-                                                $e.attr(attrToChange, replaceBeginningOfFieldPath(
-                                                            $e.attr(attrToChange), p,
-                                                            p + "." + nameOfTheSingleOldField));
-                                            });
-                                        });
-                                        // Also update the row in the table footer.
-                                        $tfootRow = $parent.children("tfoot:first")
-                                            .children("tr:first");
-                                        $tfootRow.attr({
-                                            "data-json-editor-path":
-                                                definition.path + ".+",
-                                            "data-json-editor-type": "object"
-                                        });
-
-                                        $tfootInput = $tfootRow
-                                            .children("td:first")
-                                            .find("[data-json-editor-path]:first");
-                                        var p = $tfootInput.attr("data-json-editor-path");
-                                        $tfootInput.attr("data-json-editor-path",
-                                                p + "." + nameOfTheSingleOldField);
-                                        $tfootInput.find("[data-json-editor-path^='" + p + "']")
-                                                .each(function (i, e) {
-                                            var $e = $(e);
-                                            $e.attr(attrToChange, replaceBeginningOfFieldPath(
-                                                        $e.attr(attrToChange),
-                                                        p, p + "." +
-                                                        nameOfTheSingleOldField));
-                                        });
-                                        // Also update the row in the table
-                                        // header (we must only change the
-                                        // attribute of the only <th> which is a
-                                        // column header)
-                                        $parent.children("thead:first")
-                                            .children("tr:first")
-                                            .children("th:first")
-                                            .attr("data-json-editor-name",
-                                                    nameOfTheSingleOldField);
-
-                                        // Delete the controls from the only column
-                                        // of the table because they will be added
-                                        // in a new column.
-                                        $parent.children("*").children("tr")
-                                            .children("td:nth-child(1)")
-                                                .each(function (i, td) {
-                                            // Here we do not use the jQuery
-                                            // `find` method with the `:first`
-                                            // selector because we only delete
-                                            // the only control closest to the
-                                            // table cell.
-                                            jQueryClosestDescendant($(td),
-                                                    "[data-json-editor-control]")
-                                                .remove();
-                                        });
+                                        prepareOnlyColumnForNewColumn();
 
                                         // Add a new column with controls (add,
                                         // delete).
