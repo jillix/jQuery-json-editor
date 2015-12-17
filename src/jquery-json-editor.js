@@ -1215,12 +1215,9 @@
          * @param {Object} options An object containing the following
          * properties:
          *
-         * - `arrayFieldDefinition` (Object): The field definition object of the
-         *   field of type "array" in which a new column is added and filled
-         *   with cell editors created with this function.
-         * - `arrayPath` (String): The path of the field of type "array" in
-         *   which a new column is added and filled with cell editors created
-         *   with this function.
+         * - `arrayFieldDef` (Object): The field definition object of the field
+         *   of type "array" in which a new column is added and filled with cell
+         *   editors created with this function.
          * - `indexString` (String): The string added at the end of the field
          *   path of the table (after the final "." which indicates an
          *   unfinished field path but is not a part of the path of the table)
@@ -1242,15 +1239,16 @@
 
             // Compute the path of the cell editor (or field editor inside a
             // cell) created by this function
-            path = (options.arrayPath.length > 0 ? options.arrayPath + "." :
-                    "") + options.indexString;
+            path = (options.arrayFieldDef.path.length > 0 ?
+                    options.arrayFieldDef.path + "." : "") +
+                options.indexString;
             // From the 3 possibilities: no field, one field or many (2 or more)
             // fields in the schema of the array before the addition of the new
             // column, the name should be added to the path only when the schema
             // already contains one or more fields. When it does not contain any
             // fields, the new field will be alone and its data will be accessed
             // directly from the only input in that row.
-            if (!hasEmptySchema(options.arrayFieldDefinition)) {
+            if (!hasEmptySchema(options.arrayFieldDef)) {
                 path += "." + options.newFieldDef.name;
             }
 
@@ -1269,6 +1267,68 @@
             // Create the input group for the cell editor and insert it in a
             // table cell, then return the table cell
             return $("<td>").append(self.createGroup(sch));
+        }
+
+        /*!
+         * addNewColumn
+         * Creates and shows the UI for the new column in the table. First adds
+         * a table column header then adds empty inputs under it.
+         *
+         * @name addNewColumn
+         * @function
+         * @param {Object} options An object containing the following
+         * properties:
+         *
+         * - `$table` (jQuery): The table element in which to add the new
+         *   column.
+         * - `newFieldDef` (Object): The field definition of the new column.
+         * - `arrayFieldDef` (Object): The field definition of the table (array)
+         *   in which the new column is added.
+         *
+         * @return {undefined}
+         */
+        function addNewColumn(options) {
+            // We must keep the code below compatible with the possible nested
+            // tables
+            var $trs = options.$table.children("tbody").children("tr");
+            var $tds, $cellEditor, $tfootRow;
+            // First add the column header
+            options.$table.children("thead").children("tr:first")
+                .children("th:last").before(
+                        createColumnHeader(options.newFieldDef,
+                            options.arrayFieldDef));
+            // For each row in the table body
+            for (var i = 0; i < $trs.length; i++) {
+                var $tr = $trs.eq(i);
+                // Create a new cell editor
+                $cellEditor = createNewCellEditor({
+                    arrayFieldDef: options.arrayFieldDef,
+                    indexString: i.toString(),
+                    newFieldDef: options.newFieldDef
+                });
+                $tds = $tr.children("td");
+                // If there are cells in the row, put the cell editor before the
+                // last cell
+                if ($tds.length > 0) {
+                    $tds.eq(-1).before($cellEditor);
+                // Else append the cell editor to the row
+                } else {
+                    $tr.append($cellEditor);
+                }
+            }
+            // Do the same for the table footer row.
+            $tfootRow = options.$table.children("tfoot").children("tr:first");
+            $tds = $tfootRow.children("td");
+            $cellEditor = createNewCellEditor({
+                arrayFieldDef: options.arrayFieldDef,
+                indexString: "+",
+                newFieldDef: options.newFieldDef
+            });
+            if ($tds.length > 0) {
+                $tds.eq(-1).before($cellEditor);
+            } else {
+                $tfootRow.append($cellEditor);
+            }
         }
 
         /*!
@@ -1496,67 +1556,6 @@
                         var name, label, type, inTable, newFieldDef,
                             definition, sch;
 
-                        /*!
-                         * addNewColumn
-                         * Creates and shows the UI for the new column in the
-                         * table. First adds a table column header then adds
-                         * empty inputs under it.
-                         *
-                         * @name addNewColumn
-                         * @function
-                         * @param {jQuery} $table The table element in which to
-                         * add the new column.
-                         * @param {Object} newFieldDef The field definition of
-                         * the new column.
-                         */
-                        function addNewColumn($table, newFieldDef) {
-                            // We must keep the code below compatible
-                            // with the possible nested tables.
-                            var $trs = $table.children("tbody")
-                                .children("tr");
-                            var $tds, $cellEditor, $tfootRow;
-                            // First add the column header.
-                            $table.children("thead").children("tr:first")
-                                .children("th:last").before(
-                                        createColumnHeader(newFieldDef,
-                                            definition));
-                            // For each row in the table body.
-                            for (var i = 0; i < $trs.length; i++) {
-                                var $tr = $trs.eq(i);
-                                // Create a new cell editor.
-                                $cellEditor = createNewCellEditor({
-                                    arrayFieldDefinition: definition,
-                                    arrayPath: path,
-                                    indexString: i.toString(),
-                                    newFieldDef: newFieldDef
-                                });
-                                $tds = $tr.children("td");
-                                // If there are cells in the row, put the
-                                // cell editor before the last cell.
-                                if ($tds.length > 0) {
-                                    $tds.eq(-1).before($cellEditor);
-                                // Else append the cell editor to the row.
-                                } else {
-                                    $tr.append($cellEditor);
-                                }
-                            }
-                            // Do the same for the table footer row.
-                            $tfootRow = $table.children("tfoot")
-                                .children("tr:first");
-                            $tds = $tfootRow.children("td");
-                            $cellEditor = createNewCellEditor({
-                                arrayFieldDefinition: definition,
-                                arrayPath: path,
-                                indexString: "+",
-                                newFieldDef: newFieldDef
-                            });
-                            if ($tds.length > 0) {
-                                $tds.eq(-1).before($cellEditor);
-                            } else {
-                                $tfootRow.append($cellEditor);
-                            }
-                        }
-
                         function prepareOnlyColumnForNewColumn() {
                             var $tfootRow, $tfootInput;
 
@@ -1777,7 +1776,11 @@
                                         // delete).
                                         addColumnWithControls($parent);
 
-                                        addNewColumn($parent, newFieldDef);
+                                        addNewColumn({
+                                            $table: $parent,
+                                            newFieldDef: newFieldDef,
+                                            arrayFieldDef: definition
+                                        });
                                     // Else if an existing field of type
                                     // "object" or of another type is edited
                                     // inside a table with a single subfield
@@ -1962,7 +1965,11 @@
                                         // delete).
                                         addColumnWithControls($parent);
 
-                                        addNewColumn($parent, newFieldDef);
+                                        addNewColumn({
+                                            $table: $parent,
+                                            newFieldDef: newFieldDef,
+                                            arrayFieldDef: definition
+                                        });
                                     // Else if a field of an elementary type
                                     // (not "object" or "array") is edited in a
                                     // table (a field of type "array") with
@@ -1993,7 +2000,11 @@
                                         // `addNewColumn` function uses the old
                                         // schema when calling the
                                         // `createNewCellEditor` function.
-                                        addNewColumn($parent, newFieldDef);
+                                        addNewColumn({
+                                            $table: $parent,
+                                            newFieldDef: newFieldDef,
+                                            arrayFieldDef: definition
+                                        });
 
                                         // Update the schema of the array.
                                         definition.schema = newFieldDef;
@@ -2022,7 +2033,11 @@
                                         sch[settings.orderProperty].push(name);
                                         sch[name] = newFieldDef;
 
-                                        addNewColumn($parent, newFieldDef);
+                                        addNewColumn({
+                                            $table: $parent,
+                                            newFieldDef: newFieldDef,
+                                            arrayFieldDef: definition
+                                        });
                                     // Else if a field of an elementary type
                                     // (not "object" or "array") is edited as a
                                     // column in a table (which is a field of
