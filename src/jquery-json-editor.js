@@ -1189,6 +1189,74 @@
         }
 
         /*!
+         * createNewCellEditor
+         * Creates a new cell editor (a field editor inside a table cell) to be
+         * used in a newly created column.  This function is currently used just
+         * indirectly through the `addNewColumn` function to add cells to a new
+         * column in a table.
+         *
+         * @name createNewCellEditor
+         * @function
+         * @param {Object} options An object containing the following
+         * properties:
+         *
+         * - `arrayFieldDefinition` (Object): The field definition object of the
+         *   field of type "array" in which a new column is added and filled
+         *   with cell editors created with this function.
+         * - `arrayPath` (String): The path of the field of type "array" in
+         *   which a new column is added and filled with cell editors created
+         *   with this function.
+         * - `indexString` (String): The string added at the end of the field
+         *   path of the table (after the final "." which indicates an
+         *   unfinished field path but is not a part of the path of the table)
+         *   to make the path of each of the table rows. For example, this
+         *   string is currently either an integer converted to a string or the
+         *   "+" string. When it is the "+" string it indicates that a cell
+         *   editor is created to be used in the table footer. For example, the
+         *   path of a cell editor could look like these: "hobbies.0",
+         *   "hobbies.1.name" or "hobbies.+.name".
+         * - `newFieldDef` (Object): The field definition object of the newly
+         *   created column (a column is a field inside an array), from whose
+         *   model the cell editor will be created.
+         *
+         * @return {jQuery} The newly created field editor inside a table cell
+         * (<td>).
+         */
+        function createNewCellEditor(options) {
+            var path, sch;
+
+            // Compute the path of the cell editor (or field editor inside a
+            // cell) created by this function
+            path = (options.arrayPath.length > 0 ? options.arrayPath + "." :
+                    "") + options.indexString;
+            // From the 3 possibilities: no field, one field or many (2 or more)
+            // fields in the schema of the array before the addition of the new
+            // column, the name should be added to the path only when the schema
+            // already contains one or more fields. When it does not contain any
+            // fields, the new field will be alone and its data will be accessed
+            // directly from the only input in that row.
+            if (!hasEmptySchema(options.arrayFieldDefinition)) {
+                path += "." + options.newFieldDef.name;
+            }
+
+            // Clone the field definition of the column and set the path of the
+            // clone to the path of the newly created cell editor
+            sch = $.extend(true, {}, options.newFieldDef, {
+                path: path
+            });
+
+            // Cell editors should be field editors without labels, not
+            // deletable or editable
+            delete sch.label;
+            delete sch.deletable;
+            delete sch.editable;
+
+            // Create the input group for the cell editor and insert it in a
+            // table cell, then return the table cell
+            return $("<td>").append(self.createGroup(sch));
+        }
+
+        /*!
          * createNewFieldEditor
          * Returns a jQuery object containing a new field editor.
          *
@@ -1413,35 +1481,6 @@
                         var name, label, type, inTable, newFieldDef,
                             definition, sch;
 
-                        /**
-                         * This function is used indirectly through the
-                         * `addNewColumn` function to add cells to a new column
-                         * in a table.
-                         */
-                        function createNewCellEditor(indexString) {
-                            var path2, sch2;
-                            path2 = (path ? path + "." : "") + indexString;
-                            // From the 3 possibilities: no field, one field
-                            // or many fields in the schema of the array
-                            // before the addition of the new column, the
-                            // name should be added to the path only when
-                            // the schema already contains one or more
-                            // fields. When it does not contain any fields,
-                            // the new field will be alone and its data will
-                            // be accessed directly from the only input in
-                            // that row.
-                            if (!hasEmptySchema(definition)) {
-                                path2 += "." + name;
-                            }
-                            sch2 = $.extend(true, {}, newFieldDef, {
-                                path: path2
-                            });
-                            delete sch2.label;
-                            delete sch2.deletable;
-                            delete sch2.editable;
-                            return $("<td>").append(self.createGroup(sch2));
-                        }
-
                         /*!
                          * addNewColumn
                          * Creates and shows the UI for the new column in the
@@ -1469,7 +1508,12 @@
                             for (var i = 0; i < $trs.length; i++) {
                                 var $tr = $trs.eq(i);
                                 // Create a new cell editor.
-                                $cellEditor = createNewCellEditor(i.toString());
+                                $cellEditor = createNewCellEditor({
+                                    arrayFieldDefinition: definition,
+                                    arrayPath: path,
+                                    indexString: i.toString(),
+                                    newFieldDef: newFieldDef
+                                });
                                 $tds = $tr.children("td");
                                 // If there are cells in the row, put the
                                 // cell editor before the last cell.
@@ -1484,7 +1528,12 @@
                             $tfootRow = $table.children("tfoot")
                                 .children("tr:first");
                             $tds = $tfootRow.children("td");
-                            $cellEditor = createNewCellEditor("+");
+                            $cellEditor = createNewCellEditor({
+                                arrayFieldDefinition: definition,
+                                arrayPath: path,
+                                indexString: "+",
+                                newFieldDef: newFieldDef
+                            });
                             if ($tds.length > 0) {
                                 $tds.eq(-1).before($cellEditor);
                             } else {
