@@ -971,9 +971,24 @@
          * @function
          * @param {Object} def The field definition for which to generate the
          * column header.
+         * @param {Object} arrayFieldDefinition The field definition of the
+         * array in whose table representation the column header should be
+         * created.
          * @return {jQuery} The column header which is a `<th>` element.
          */
-        function createColumnHeader(def) {
+        function createColumnHeader(def, arrayFieldDefinition) {
+            // The new column should not have the attribute
+            // `data-json-editor-name` set in the column header when it is the
+            // only column in the table, so we clone the field definition object
+            // (`def`) and remove the `name` property from it. When this
+            // property is not defined on the `def` object, the generated `<th>`
+            // element will have the "data-json-editor-name" attribute set to an
+            // empty string.
+            if (hasEmptySchema(arrayFieldDefinition)) {
+                def = $.extend(true, {}, def);
+                delete def.name;
+            }
+
             var $th = $("<th>", {
                 text: def.label || settings.defaultArrayFieldLabel,
                 "data-json-editor-name": def.name || ""
@@ -1491,10 +1506,10 @@
                          * @function
                          * @param {jQuery} $table The table element in which to
                          * add the new column.
-                         * @param {Object} newDef The field definition of the
-                         * new column.
+                         * @param {Object} newFieldDef The field definition of
+                         * the new column.
                          */
-                        function addNewColumn($table, newDef) {
+                        function addNewColumn($table, newFieldDef) {
                             // We must keep the code below compatible
                             // with the possible nested tables.
                             var $trs = $table.children("tbody")
@@ -1503,7 +1518,8 @@
                             // First add the column header.
                             $table.children("thead").children("tr:first")
                                 .children("th:last").before(
-                                        createColumnHeader(newDef));
+                                        createColumnHeader(newFieldDef,
+                                            definition));
                             // For each row in the table body.
                             for (var i = 0; i < $trs.length; i++) {
                                 var $tr = $trs.eq(i);
@@ -1965,16 +1981,6 @@
                                     // column) inside a table (a field of type
                                     // "array") without any subfields (columns)
                                     if (options.newFields) {
-                                        // The new column should not have the
-                                        // attribute `data-json-editor-name` set
-                                        // in the column header, so we clone the
-                                        // field definition object and remove
-                                        // the `name` and `path` properties from
-                                        // it.
-                                        var def = $.extend(true, {}, newFieldDef);
-                                        delete def.name;
-                                        delete def.path;
-
                                         // Add the new column before deleting
                                         // the controls column because
                                         // `deleteControlsColumn` puts the
@@ -1987,7 +1993,7 @@
                                         // `addNewColumn` function uses the old
                                         // schema when calling the
                                         // `createNewCellEditor` function.
-                                        addNewColumn($parent, def);
+                                        addNewColumn($parent, newFieldDef);
 
                                         // Update the schema of the array.
                                         definition.schema = newFieldDef;
@@ -2379,7 +2385,7 @@
                         sch = $.extend(true, {}, sch);
                         sch.deletable = field.deletableFields;
                     }
-                    $th = createColumnHeader(sch);
+                    $th = createColumnHeader(sch, field);
                     $ths.push($th);
                 // Else if the schema of the array contains more than one field
                 } else if (!hasEmptySchema(field)) {
@@ -2393,7 +2399,7 @@
                             sch = $.extend(true, {}, sch);
                             sch.deletable = field.deletableFields;
                         }
-                        $th = createColumnHeader(sch);
+                        $th = createColumnHeader(sch, field);
                         $ths.push($th);
                     }
                 // Else if the schema of the array does not contain any fields
