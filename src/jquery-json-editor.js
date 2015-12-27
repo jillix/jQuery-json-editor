@@ -1492,6 +1492,26 @@
         }
 
         /*!
+         * fieldPathIsTableColumn
+         * When path is of the form "arrayTable.3.columnName" (instead of "3"
+         * there could have been any natural number) or
+         * "arrayTable.+.columnName" this function returns `true`. Otherwise it
+         * returns false. The case when the table has a single column of type
+         * object and "columnName" in the path examples above refer to a
+         * property inside that column of type "object" is not handled and the
+         * column name is the actual index (a natural number or the "+"
+         * character).
+         */
+        function fieldPathIsTableColumn(p) {
+            var parts = p.split(".");
+            if (parts.length < 2) {
+                return false;
+            }
+            return parts[parts.length - 2] === "+" || Number.isInteger(
+                    parseInt(parts[parts.length - 2]));
+        }
+
+        /*!
          * createNewFieldEditor
          * Returns a jQuery object containing a new field editor.
          *
@@ -1817,7 +1837,28 @@
                                     // created inside an array (table) with no
                                     // subfields
                                     if (options.newFields) {
-                                        // TODO: Not yet implemented.
+                                        // Add the new column before deleting
+                                        // the controls column because
+                                        // `deleteControlsColumn` puts the
+                                        // controls in the last column after
+                                        // removing the controls column, and
+                                        // that last column exists only after
+                                        // calling the `addNewColumn` function.
+                                        // Add the new column before updating
+                                        // the schema of the array because the
+                                        // `addNewColumn` function uses the old
+                                        // schema when calling the
+                                        // `createNewCellEditor` function.
+                                        addNewColumn({
+                                            $table: $parent,
+                                            newFieldDef: newFieldDef,
+                                            arrayFieldDef: definition
+                                        });
+
+                                        // Update the schema of the array.
+                                        definition.schema = newFieldDef;
+
+                                        deleteControlsColumn($parent);
                                     // Else if an existing field of type
                                     // "object" or of another type is edited
                                     // inside an array (table) with no subfields
@@ -1835,7 +1876,15 @@
                                     // created inside an array (table) with 2
                                     // or more subfields
                                     if (options.newFields) {
-                                        // TODO: Not yet implemented.
+                                        // First update the schema.
+                                        sch[settings.orderProperty].push(name);
+                                        sch[name] = newFieldDef;
+
+                                        addNewColumn({
+                                            $table: $parent,
+                                            newFieldDef: newFieldDef,
+                                            arrayFieldDef: definition
+                                        });
                                     // Else if an existing field of type
                                     // "object" is edited inside an array
                                     // (table) with 2 or more subfields
@@ -2142,10 +2191,76 @@
                                 }
                                 sch[name] = newFieldDefWithoutData;
 
-                                // Create and show the UI for the field
-                                // definition and add it before the field
-                                // editor.
-                                $div.before(self.createGroup(newFieldDef));
+                                // If the path of the parent field is a table
+                                // column, make the same changes in all the
+                                // cells under that column
+                                if (fieldPathIsTableColumn(path)) {
+                                    // Get the parent <table> element in which
+                                    // we will update the contents of the column
+                                    // in which we should insert the
+                                    // `newFieldDef` field definition in each of
+                                    // the rows in the table body and table
+                                    // footer
+                                    var $table = $parent.closest("table");
+                                    // Get the index of the column in which we
+                                    // should add the `newFieldDef` field
+                                    // definition in each of the cells inside
+                                    // that column
+                                    var columnIndex = $div.closest("td").index();
+                                    var $tr, $td, def, parts;
+
+                                    // For each row in the table body or footer
+                                    $table.children("tbody")
+                                        .children("tr").each(function (i, tr) {
+                                        $tr = $(tr);
+
+                                        // Get the cell in the `newFieldDef`'s
+                                        // column (which is the `sch[name]`
+                                        // column) in the current row `tr`
+                                        $td = $tr.children().eq(columnIndex);
+
+                                        // The path of `newFieldDef` is similar
+                                        // to
+                                        // "arrayTable.0.columnName.columnSubfield",
+                                        // it is a path to a subfield inside a
+                                        // table column (which is the same as an
+                                        // array direct subfield, child field)
+                                        // of type "object".  We clone
+                                        // `newFieldDef` and change its path to
+                                        // refer to the current row.  `def` will
+                                        // be the definition of an item inside
+                                        // the column, not of the column itself
+                                        def = $.extend(true, {}, newFieldDef);
+                                        parts = def.path.split(".");
+                                        parts[parts.length - 3] = i.toString();
+                                        def.path = parts.join(".");
+
+                                        // Inside this cell create, insert and
+                                        // show the UI of the `def` field
+                                        // definition just before the field
+                                        // editor
+                                        $td.find(".json-editor-new-field-form:first").
+                                            before(self.createGroup(def));
+                                    });
+                                    // Do the same in the table footer where
+                                    // there is a single row
+                                    $tr = $table.children("tfoot:first")
+                                        .children("tr:first");
+                                    $td = $tr.children().eq(columnIndex);
+
+                                    def = $.extend(true, {}, newFieldDef);
+                                    parts = def.path.split(".");
+                                    parts[parts.length - 3] = "+";
+                                    def.path = parts.join(".");
+
+                                    $td.find(".json-editor-new-field-form:first").
+                                        before(self.createGroup(def));
+                                } else {
+                                    // Create and show the UI for the field
+                                    // definition and add it before the field
+                                    // editor
+                                    $div.before(self.createGroup(newFieldDef));
+                                }
                             }
                         }
 
