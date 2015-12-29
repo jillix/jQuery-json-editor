@@ -3568,7 +3568,7 @@
                 data[$this.val()] = value;
             });
 
-            if (directValue) {
+            if (directValue && getTypeOf(data) !== "object") {
                 return data;
             }
             return handleArrays(unflattenObject(data));
