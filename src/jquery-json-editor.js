@@ -2230,6 +2230,14 @@
                                 // inside an object is edited, do everything
                                 // possible to keep the old value
                                 } else {
+                                    // `$editedInput` is defined only when
+                                    // `options.newFields` is false or, with
+                                    // other words, when an existing field is
+                                    // edited
+                                    var _path = $editedInput
+                                        .attr("data-json-editor-path");
+                                    var oldName = self.getNameFromPath(_path);
+
                                     // If the old field definition has the same
                                     // type as the new field definition, keep
                                     // the old value
@@ -2357,7 +2365,20 @@
                         // above, remove the field editor and the old field UI
                         // from the document.
                         if (!options.newFields) {
-                            options.editedGroup.remove();
+                            // `$editedInput` is defined only when
+                            // `options.newFields` is false or, with
+                            // other words, when an existing field is
+                            // edited
+                            var _path = $editedInput
+                                .attr("data-json-editor-path");
+                            var oldName = self.getNameFromPath(_path);
+
+                            if (fieldPathIsUnderTableColumn(_path)) {
+                                deleteUIOfSubfieldInObjectColumn(options.
+                                        editedGroup);
+                            } else {
+                                options.editedGroup.remove();
+                            }
                             $div.remove();
                             return;
                         }
@@ -2515,6 +2536,86 @@
          */
         function deleteValueAtPath(fieldPath) {
             deleteValue(settings.data, fieldPath);
+        }
+
+        /*!
+         * deleteUIOfSubfieldInObjectColumn
+         * Deletes the UI (the label, the input element and the Delete field and
+         * Edit field buttons) of a field inside the objects under a column of
+         * type "object", reflecting the change in all the objects under that
+         * column.
+         *
+         * @name deleteUIOfSubfieldInObjectColumn
+         * @function
+         * @param {jQuery} $group The input group element of a field instance
+         * under a column of type "object".
+         * @return {undefined}
+         */
+        function deleteUIOfSubfieldInObjectColumn($group) {
+            var groupPath = $group.find("[data-json-editor-path]:first")
+                .attr("data-json-editor-path");
+            // Get the index of the column in which we should delete the field
+            // in each of the cells inside that column
+            var index = $group.closest("td").index();
+            var $td, $tr, path, parts, $e;
+            // Get the parent <table> element in which we will update the
+            // contents of the column in which we should delete the field in
+            // each of the rows in the table body and table footer
+            var $table = $group.closest("table");
+
+            // For each row in the table body
+            $table.children("tbody")
+                    .children("tr").each(function (i, tr) {
+                $tr = $(tr);
+
+                // Get the cell in the column in which the field should be
+                // deleted in the current row `tr`
+                $td = $tr.children().eq(index);
+
+                // The path of `field` (the field which should be deleted under
+                // all the cells under its column) is similar to
+                // "arrayTable.0.columnName.columnSubfield", it is a path to a
+                // subfield inside a table column (which is the same as an array
+                // direct subfield, child field) of type "object". We copy its
+                // path and change the copy to refer to field instance inside
+                // the current row.
+                path = updateDeepestRowIndexInFieldPath(
+                        groupPath, i.toString());
+
+                // Inside this cell delete the field UI of the field definition
+                // `field` at the field path `path`
+                $e =
+                    $td.find("[data-json-editor-path=\"" +
+                        path + "\"]");
+                $e = closestWithFilter($e, function ($el) {
+                    return $el.siblings(
+                            ".json-editor-new-field-form:first").
+                        length > 0;
+                });
+                // This condition should always be met
+                if ($e) {
+                    $e.remove();
+                }
+            });
+            // Do the same in the table footer where there is a single row
+            $tr = $table.children("tfoot:first").children(
+                    "tr:first");
+            $td = $tr.children().eq(index);
+
+            path = updateDeepestRowIndexInFieldPath(
+                    groupPath, "+");
+
+            $e = $td.find("[data-json-editor-path=\"" +
+                    path + "\"]");
+            $e = closestWithFilter($e, function ($el) {
+                return $el.siblings(
+                        ".json-editor-new-field-form:first").
+                    length > 0;
+            });
+            // This condition should always be met
+            if ($e) {
+                $e.remove();
+            }
         }
 
         /**
@@ -2800,77 +2901,7 @@
                             // column, do the same deletion in all the cells
                             // under that column.
                             if (fieldPathIsUnderTableColumn(field.path)) {
-                                // Get the index of the column in which we
-                                // should delete the field in each of the cells
-                                // inside that column
-                                var index = $group.closest("td").index();
-                                var $td, $tr, path, parts, $e;
-                                // Get the parent <table> element in which we
-                                // will update the contents of the column in
-                                // which we should delete the field in each of
-                                // the rows in the table body and table footer
-                                var $table = $group.closest("table");
-
-                                // For each row in the table body
-                                $table.children("tbody")
-                                        .children("tr").each(function (i, tr) {
-                                    $tr = $(tr);
-
-                                    // Get the cell in the column in which the
-                                    // field should be deleted in the current
-                                    // row `tr`
-                                    $td = $tr.children().eq(index);
-
-                                    // The path of `field` (the field which
-                                    // should be deleted under all the cells
-                                    // under its column) is similar to
-                                    // "arrayTable.0.columnName.columnSubfield",
-                                    // it is a path to a subfield inside a table
-                                    // column (which is the same as an array
-                                    // direct subfield, child field) of type
-                                    // "object". We copy its path and
-                                    // change the copy to refer to field
-                                    // instance inside the current
-                                    // row.
-                                    path = updateDeepestRowIndexInFieldPath(field.
-                                            path, i.toString());
-
-                                    // Inside this cell delete the field UI of
-                                    // the field definition `field` at the field
-                                    // path `path`
-                                    $e =
-                                        $td.find("[data-json-editor-path=\"" +
-                                            path + "\"]");
-                                    $e = closestWithFilter($e, function ($el) {
-                                        return $el.siblings(
-                                                ".json-editor-new-field-form:first").
-                                            length > 0;
-                                    });
-                                    // This condition should always be met
-                                    if ($e) {
-                                        $e.remove();
-                                    }
-                                });
-                                // Do the same in the table footer where there
-                                // is a single row
-                                $tr = $table.children("tfoot:first").children(
-                                        "tr:first");
-                                $td = $tr.children().eq(index);
-
-                                path = updateDeepestRowIndexInFieldPath(field.
-                                        path, "+");
-
-                                $e = $td.find("[data-json-editor-path=\"" +
-                                        path + "\"]");
-                                $e = closestWithFilter($e, function ($el) {
-                                    return $el.siblings(
-                                            ".json-editor-new-field-form:first").
-                                        length > 0;
-                                });
-                                // This condition should always be met
-                                if ($e) {
-                                    $e.remove();
-                                }
+                                deleteUIOfSubfieldInObjectColumn($group);
                             } else {
                                 $group.remove();
                             }
