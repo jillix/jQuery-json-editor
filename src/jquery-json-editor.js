@@ -444,6 +444,60 @@
         return $found.first(); // Return first match of the collection
     }
 
+    /*!
+     * closestWithFilter
+     * Searches through the parents of the given element, the first one (the
+     * closest to the given element) which satisfies the given filter function
+     * and returns it.
+     *
+     * @name closestWithFilter
+     * @function
+     * @param {jQuery} $e The jQuery element for which to search the closest
+     * parent matching the specified filter function.
+     * @param {Function} filter The filter function with which to test the
+     * parents.
+     * @return {jQuery} A jQuery element which is the first parent that matches
+     * the filter function, or `undefined` if there isn't any parent that
+     * matches the filter function.
+     */
+    function closestWithFilter($e, filter) {
+        do {
+            if ($e.length === 0) {
+                return;
+            }
+            if (filter($e)) {
+                return $e;
+            }
+            $e = $e.parent();
+        } while (true);
+    }
+
+    /*!
+     * updateDeepestRowIndexInFieldPath
+     * Replaces the last row index in the path with the given `indexString`. For
+     * example, when called with the path "a.0.x.b" and the index string "+",
+     * this function will return "a.+.x.b". When called with the path
+     * "b.4.c.2.a" and the index string "5", it will return "b.4.c.5.a".
+     *
+     * @name updateDeepestRowIndexInFieldPath
+     * @function
+     * @param {String} path The field path which should be updated.
+     * @param {String} indexString The string that should replace the last row
+     * index in the path.
+     * @return {String} The updated field path.
+     */
+    function updateDeepestRowIndexInFieldPath(path, indexString) {
+        var parts = path.split(".");
+        for (var i = parts.length - 1; i >= 0; i--) {
+            if (parts[i] === "+" ||
+                    Number.isInteger(parseInt(parts[i]))) {
+                parts[i] = indexString;
+                break;
+            }
+        }
+        return parts.join(".");
+    }
+
     /**
      * $.fn.jsonEdit
      * Initializes the JSON editor on selected elements.
@@ -1501,14 +1555,50 @@
          * property inside that column of type "object" is not handled and the
          * column name is the actual index (a natural number or the "+"
          * character).
+         *
+         * @name fieldPathIsTableColumn
+         * @function
+         * @param {String} path The path which should be tested.
+         * @return {Boolean} Whether the given path represents a table column.
          */
-        function fieldPathIsTableColumn(p) {
-            var parts = p.split(".");
+        function fieldPathIsTableColumn(path) {
+            var parts = path.split(".");
             if (parts.length < 2) {
                 return false;
             }
-            return parts[parts.length - 2] === "+" || Number.isInteger(
-                    parseInt(parts[parts.length - 2]));
+            var part = parts[parts.length - 2];
+            return part === "+" || Number.isInteger(parseInt(part));
+        }
+
+        /*!
+         * fieldPathIsUnderTableColumn
+         * Returns true if the given path represents a field under a table
+         * column, returns false otherwise. See the documentation comment of the
+         * `fieldPathIsTableColumn` private function. Currently this function
+         * tests only direct children fields of table columns.
+         *
+         * @name fieldPathIsUnderTableColumn
+         * @function
+         * @param {String} path The path which should be tested.
+         * @return {Boolean} Whether the given path represents a field under a
+         * table column.
+         */
+        function fieldPathIsUnderTableColumn(path) {
+            path = fieldPathGoUp(path);
+            return fieldPathIsTableColumn(path);
+        }
+
+        /*!
+         * fieldPathGoUp
+         * Goes up in the given field path and returns the new path.
+         *
+         * @name fieldPathGoUp
+         * @function
+         * @param {String} path The path which should be modified.
+         * @return {Boolean} The new path after going up in the given path.
+         */
+        function fieldPathGoUp(path) {
+            return path.split(".").slice(0, -1).join(".");
         }
 
         /*!
@@ -2209,7 +2299,7 @@
                                     var columnIndex = $div.closest("td").index();
                                     var $tr, $td, def, parts;
 
-                                    // For each row in the table body or footer
+                                    // For each row in the table body
                                     $table.children("tbody")
                                         .children("tr").each(function (i, tr) {
                                         $tr = $(tr);
@@ -2227,13 +2317,12 @@
                                         // array direct subfield, child field)
                                         // of type "object".  We clone
                                         // `newFieldDef` and change its path to
-                                        // refer to the current row.  `def` will
+                                        // refer to the current row. `def` will
                                         // be the definition of an item inside
-                                        // the column, not of the column itself
+                                        // the column, not of the column itself.
                                         def = $.extend(true, {}, newFieldDef);
-                                        parts = def.path.split(".");
-                                        parts[parts.length - 3] = i.toString();
-                                        def.path = parts.join(".");
+                                        def.path = updateDeepestRowIndexInFieldPath(
+                                                def.path, i.toString());
 
                                         // Inside this cell create, insert and
                                         // show the UI of the `def` field
@@ -2249,9 +2338,8 @@
                                     $td = $tr.children().eq(columnIndex);
 
                                     def = $.extend(true, {}, newFieldDef);
-                                    parts = def.path.split(".");
-                                    parts[parts.length - 3] = "+";
-                                    def.path = parts.join(".");
+                                    def.path = updateDeepestRowIndexInFieldPath(
+                                                def.path, "+");
 
                                     $td.find(".json-editor-new-field-form:first").
                                         before(self.createGroup(def));
@@ -2708,14 +2796,93 @@
                             // When the Delete field button is clicked, remove
                             // the group element from the document (the group
                             // element contains the input element and the Delete
-                            // field button).
-                            $group.remove();
+                            // field button). If the field is under a table
+                            // column, do the same deletion in all the cells
+                            // under that column.
+                            if (fieldPathIsUnderTableColumn(field.path)) {
+                                // Get the index of the column in which we
+                                // should delete the field in each of the cells
+                                // inside that column
+                                var index = $group.closest("td").index();
+                                var $td, $tr, path, parts, $e;
+                                // Get the parent <table> element in which we
+                                // will update the contents of the column in
+                                // which we should delete the field in each of
+                                // the rows in the table body and table footer
+                                var $table = $group.closest("table");
+
+                                // For each row in the table body
+                                $table.children("tbody")
+                                        .children("tr").each(function (i, tr) {
+                                    $tr = $(tr);
+
+                                    // Get the cell in the column in which the
+                                    // field should be deleted in the current
+                                    // row `tr`
+                                    $td = $tr.children().eq(index);
+
+                                    // The path of `field` (the field which
+                                    // should be deleted under all the cells
+                                    // under its column) is similar to
+                                    // "arrayTable.0.columnName.columnSubfield",
+                                    // it is a path to a subfield inside a table
+                                    // column (which is the same as an array
+                                    // direct subfield, child field) of type
+                                    // "object". We copy its path and
+                                    // change the copy to refer to field
+                                    // instance inside the current
+                                    // row.
+                                    path = updateDeepestRowIndexInFieldPath(field.
+                                            path, i.toString());
+
+                                    // Inside this cell delete the field UI of
+                                    // the field definition `field` at the field
+                                    // path `path`
+                                    $e =
+                                        $td.find("[data-json-editor-path=\"" +
+                                            path + "\"]");
+                                    $e = closestWithFilter($e, function ($el) {
+                                        return $el.siblings(
+                                                ".json-editor-new-field-form:first").
+                                            length > 0;
+                                    });
+                                    // This condition should always be met
+                                    if ($e) {
+                                        $e.remove();
+                                    }
+                                });
+                                // Do the same in the table footer where there
+                                // is a single row
+                                $tr = $table.children("tfoot:first").children(
+                                        "tr:first");
+                                $td = $tr.children().eq(index);
+
+                                path = updateDeepestRowIndexInFieldPath(field.
+                                        path, "+");
+
+                                $e = $td.find("[data-json-editor-path=\"" +
+                                        path + "\"]");
+                                $e = closestWithFilter($e, function ($el) {
+                                    return $el.siblings(
+                                            ".json-editor-new-field-form:first").
+                                        length > 0;
+                                });
+                                // This condition should always be met
+                                if ($e) {
+                                    $e.remove();
+                                }
+                            } else {
+                                $group.remove();
+                            }
+
                             // Also update the schema in the `settings.schema`
                             // variable. First get the schema of the path
                             // created by removing the last segment of
-                            // `field.path`.
-                            sch = self.getDefinitionAtPath(field.path.split(".")
-                                    .slice(0, -1).join(".")).schema;
+                            // `field.path`. The code below also works well in
+                            // the case of subfields of table columns, table
+                            // columns which are of type "object"
+                            sch = self.getDefinitionAtPath(fieldPathGoUp(field.
+                                        path)).schema;
                             order = sch[settings.orderProperty];
                             order.splice(order.indexOf(field.name), 1);
                             delete sch[field.name];
