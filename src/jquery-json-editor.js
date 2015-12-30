@@ -1867,7 +1867,7 @@
                             name: name,
                             label: label,
                             type: type,
-                            path: (path ? path + "." : "") + name
+                            path: (path ? path.replace(/\.\d+$/, "") + "." : "") + name
                         };
                         inheritField(newFieldDef, {
                             addField: options.addFields,
@@ -3036,11 +3036,19 @@
             currentVal = settings.schema[currentPart];
             for (var i = 1; i < fieldPathParts.length; i++) {
                 currentPart = fieldPathParts[i];
+
                 // If the schema of the current field definition has a single
-                // field
-                if (typeof currentVal.schema.type === "string") {
+                // field (the same as: `schemaHasType` is `true`)
+                var schemaHasType = typeof currentVal.schema.type === "string";
+                if (schemaHasType) {
                     currentVal = currentVal.schema;
-                    i--;
+                    // If the current part is not an integer (a table row
+                    // index), reprocess the current part.
+                    var currentPartIsInt = Number.isInteger(parseInt(
+                                currentPart));
+                    if (!currentPartIsInt) {
+                        i--;
+                    }
                 // Else if the schema is empty or contains more than one field
                 } else {
                     // This value can be undefined
