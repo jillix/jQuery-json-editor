@@ -1178,6 +1178,10 @@
          * - `latestName` (String): The latest name of the saved field. It can
          *   be the same as the old name if it was not changed in the field
          *   editor.
+         * - `parentPath` (String): The field path of the parent field in which
+         *   the new field of type "object" or "array" should be added.
+         * - `parentElement` (jQuery): The element representing the parent field
+         *   in which the new field of type "object" or "array" should be added.
          *
          * @return {undefined}
          */
@@ -1251,10 +1255,18 @@
                 updateAndRenameFieldData(_path, options.latestName);
             }
 
-            // Create and show the UI for the field definition and add it before
-            // the field editor.
-            options.$fieldEditorForm.before(self.createGroup(options.
-                        newFieldDef));
+            // If the new field's path is inside a table column of type "object"
+            if (fieldPathIsTableColumn(options.parentPath)) {
+                // Create and show the UI for the field definition in each of
+                // the rows under that column
+                createUIOfSubfieldInObjectColumn(options.parentElement, options.
+                        newFieldDef);
+            } else {
+                // Create and show the UI for the field definition and add it
+                // before the field editor.
+                options.$fieldEditorForm.before(self.createGroup(options.
+                            newFieldDef));
+            }
         }
 
         /*!
@@ -1993,7 +2005,9 @@
                                     $editedInput: $editedInput,
                                     newFieldDef: newFieldDef,
                                     $fieldEditorForm: $div,
-                                    latestName: name
+                                    latestName: name,
+                                    parentPath: path,
+                                    parentElement: $parent
                                 });
                             }
                         // Else if a field of type "array" is added or edited in
@@ -2072,7 +2086,9 @@
                                     $editedInput: $editedInput,
                                     newFieldDef: newFieldDef,
                                     $fieldEditorForm: $div,
-                                    latestName: name
+                                    latestName: name,
+                                    parentPath: path,
+                                    parentElement: $parent
                                 });
                             }
                         // Else if a field of an elementary type (not "object"
@@ -2293,64 +2309,8 @@
                                 // column, make the same changes in all the
                                 // cells under that column
                                 if (fieldPathIsTableColumn(path)) {
-                                    // Get the parent <table> element in which
-                                    // we will update the contents of the column
-                                    // in which we should insert the
-                                    // `newFieldDef` field definition in each of
-                                    // the rows in the table body and table
-                                    // footer
-                                    var $table = $parent.closest("table");
-                                    // Get the index of the column in which we
-                                    // should add the `newFieldDef` field
-                                    // definition in each of the cells inside
-                                    // that column
-                                    var columnIndex = $div.closest("td").index();
-                                    var $tr, $td, def, parts;
-
-                                    // For each row in the table body
-                                    $table.children("tbody")
-                                        .children("tr").each(function (i, tr) {
-                                        $tr = $(tr);
-
-                                        // Get the cell in the `newFieldDef`'s
-                                        // column (which is the `sch[name]`
-                                        // column) in the current row `tr`
-                                        $td = $tr.children().eq(columnIndex);
-
-                                        // The path of `newFieldDef` is similar
-                                        // to
-                                        // "arrayTable.0.columnName.columnSubfield",
-                                        // it is a path to a subfield inside a
-                                        // table column (which is the same as an
-                                        // array direct subfield, child field)
-                                        // of type "object".  We clone
-                                        // `newFieldDef` and change its path to
-                                        // refer to the current row. `def` will
-                                        // be the definition of an item inside
-                                        // the column, not of the column itself.
-                                        def = $.extend(true, {}, newFieldDef);
-                                        def.path = updateDeepestRowIndexInFieldPath(
-                                                def.path, i.toString());
-
-                                        // Inside this cell create, insert and
-                                        // show the UI of the `def` field
-                                        // definition just before the field
-                                        // editor
-                                        $td.find(".json-editor-new-field-form:first").
-                                            before(self.createGroup(def));
-                                    });
-                                    // Do the same in the table footer where
-                                    // there is a single row
-                                    $tr = $table.children("tfoot:first")
-                                        .children("tr:first");
-                                    $td = $tr.children().eq(columnIndex);
-
-                                    def = $.extend(true, {}, newFieldDef);
-                                    def.path = updateDeepestRowIndexInFieldPath(
-                                                def.path, "+");
-
-                                    $td.find(".json-editor-new-field-form:first").
-                                        before(self.createGroup(def));
+                                    createUIOfSubfieldInObjectColumn($parent,
+                                            newFieldDef);
                                 } else {
                                     // Create and show the UI for the field
                                     // definition and add it before the field
@@ -2552,7 +2512,8 @@
          * @return {undefined}
          */
         function deleteUIOfSubfieldInObjectColumn($group) {
-            var groupPath = $group.find("[data-json-editor-path]:first")
+            var groupPath = $group.attr("data-json-editor-path") || $group.
+                find("[data-json-editor-path]:first")
                 .attr("data-json-editor-path");
             // Get the index of the column in which we should delete the field
             // in each of the cells inside that column
@@ -2616,6 +2577,74 @@
             if ($e) {
                 $e.remove();
             }
+        }
+
+        /*!
+         * createUIOfSubfieldInObjectColumn
+         * Creates the input groups (which are the UI for a field definition) of a
+         * field inside a column of type "object". This means creating an
+         * instance of the input group in each row in the table body and in the
+         * table footer inside the column in which the given `$parent` is found.
+         *
+         * @name createUIOfSubfieldInObjectColumn
+         * @function
+         * @param {jQuery} $parent The UI of one of the parent objects inside
+         * the column of type "object" in which the UI of the new field
+         * definition should be inserted. This is the parent element of the new
+         * field form with which the `newFieldDef` field definition was created.
+         * @param {Object} newFieldDef The field definition object of the new
+         * field which should be added in each row under the column of
+         * `$parent`.
+         * @return {undefined}
+         */
+        function createUIOfSubfieldInObjectColumn($parent, newFieldDef) {
+            // Get the parent <table> element in which we will update the
+            // contents of the column in which we should insert the
+            // `newFieldDef` field definition in each of the rows in the table
+            // body and table footer
+            var $table = $parent.closest("table");
+            // Get the index of the column in which we should add the
+            // `newFieldDef` field definition in each of the cells inside that
+            // column
+            var columnIndex = $parent.closest("td").index();
+            var $tr, $td, def, parts;
+
+            // For each row in the table body
+            $table.children("tbody")
+                .children("tr").each(function (i, tr) {
+                $tr = $(tr);
+
+                // Get the cell in the `newFieldDef`'s column (which is the
+                // `sch[name]` column) in the current row `tr`
+                $td = $tr.children().eq(columnIndex);
+
+                // The path of `newFieldDef` is similar to
+                // "arrayTable.0.columnName.columnSubfield", it is a path to a
+                // subfield inside a table column (which is the same as an array
+                // direct subfield, child field) of type "object".  We clone
+                // `newFieldDef` and change its path to refer to the current
+                // row. `def` will be the definition of an item inside the
+                // column, not of the column itself.
+                def = $.extend(true, {}, newFieldDef);
+                def.path = updateDeepestRowIndexInFieldPath(
+                        def.path, i.toString());
+
+                // Inside this cell create, insert and show the UI of the `def`
+                // field definition just before the field editor
+                $td.find(".json-editor-new-field-form:first").
+                    before(self.createGroup(def));
+            });
+            // Do the same in the table footer where there is a single row
+            $tr = $table.children("tfoot:first")
+                .children("tr:first");
+            $td = $tr.children().eq(columnIndex);
+
+            def = $.extend(true, {}, newFieldDef);
+            def.path = updateDeepestRowIndexInFieldPath(
+                        def.path, "+");
+
+            $td.find(".json-editor-new-field-form:first").
+                before(self.createGroup(def));
         }
 
         /**
@@ -3568,9 +3597,15 @@
                 data[$this.val()] = value;
             });
 
+            // If the value is a direct value, it is still possible that it is
+            // an object which should pe unflattened. But if it isn't an object
+            // then it is an elementary value which should be directly returned.
             if (directValue && getTypeOf(data) !== "object") {
                 return data;
             }
+            // If it isn't a direct value and if it isn't an object, it surely
+            // must be unflattened and processed (searched) for integer property
+            // names which should be transformed in arrays.
             return handleArrays(unflattenObject(data));
         };
 
