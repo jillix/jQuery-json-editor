@@ -45,7 +45,7 @@ a = {
         editableObject: {
             "you can edit this field": "and this value"
         },
-        preferredMusicGenre: "Classical",
+        preferredMusicGenre: "classical",
         editableObjectWithPossibleAnswers: {
             "random number": 3,
             "another field with editable name": "value"
@@ -58,8 +58,33 @@ a = {
                     test3: "Testing 3"
                 },
                 dogs: [
-                    { name: "Bobby", breed: "Boxer" },
-                    { name: "Rex", breed: "Wolfdog" }
+                    {
+                        name: "Bobby",
+                        breed: "Boxer",
+                        accessories: {
+                            lead: true,
+                            muzzle: true,
+                            collar: true,
+                            clothes: true,
+                            toys: [
+                                { name: "ball", quantity: 2 },
+                                { name: "frisbee", quantity: 1 }
+                            ]
+                        }
+                    },
+                    {
+                        name: "Rex",
+                        breed: "Wolfdog",
+                        accessories: {
+                            lead: true,
+                            muzzle: true,
+                            collar: true,
+                            clothes: false,
+                            toys: [
+                                { name: "ball", quantity: 1 }
+                            ]
+                        }
+                    }
                 ]
             }
         }
@@ -113,13 +138,13 @@ a = {
         preferredMusicGenre: {
             label: "Preferred music genre",
             possible: [
-                "Blues",
-                "Classical",
-                "Electronic",
-                "Folk",
-                "Hip hop",
-                "Pop",
-                "Rock"
+                "blues",
+                "classical",
+                "electronic",
+                "folk",
+                "hip hop",
+                "pop",
+                "rock"
             ]
         },
         editableObjectWithPossibleAnswers: {
@@ -168,10 +193,30 @@ a = {
                             addField: true,
                             deletableFields: true,
                             schema: {
-                                _order: ["name", "breed"],
+                                _order: ["name", "breed", "accessories"],
                                 name: { label: "Name" },
                                 breed: { label: "Breed", possible: ["Dalmatian",
                                     "Boxer", "Wolfdog"] },
+                                accessories: { label: "Accessories",
+                                    schema: {
+                                        _order: ["lead", "muzzle", "collar",
+                                            "clothes", "toys"],
+                                        lead: { label: "Lead" },
+                                        muzzle: { label: "Muzzle" },
+                                        collar: { label: "Collar" },
+                                        clothes: { label: "Clothes" },
+                                        toys: {
+                                            label: "Toys",
+                                            schema: {
+                                                _order: ["name", "quantity"],
+                                                name: { label: "Name",
+                                                    possible: [ "ball",
+                                                    "frisbee" ] },
+                                                quantity: { label: "Quantity" }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

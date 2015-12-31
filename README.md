@@ -76,7 +76,8 @@ Collects data from form inputs and return the data object.
    right foot.
 2. Fork the project in your account and create a new branch:
    `your-great-feature`.
-3. Commit your changes in that branch.
+3. Commit your changes in that branch. Please see the developer guidelines in
+   [CONTRIBUTING.md](https://github.com/jillix/jQuery-json-editor/blob/master/CONTRIBUTING.md).
 4. Open a pull request, and reference the initial issue in the pull request
    message.
 
